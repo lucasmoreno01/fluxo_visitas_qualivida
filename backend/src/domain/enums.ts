@@ -1,0 +1,32 @@
+export enum UserRole {
+  ADMIN = "ADMIN",
+  PROFISSIONAL = "PROFISSIONAL",
+}
+
+export enum ProfessionalType {
+  ENFERMEIRO = "ENFERMEIRO",
+  FISIOTERAPEUTA = "FISIOTERAPEUTA",
+  MEDICO = "MEDICO",
+}
+
+export enum VisitType {
+  AVALIACAO = "AVALIACAO",
+  CURATIVO = "CURATIVO",
+  FISIOTERAPIA = "FISIOTERAPIA",
+  MEDICACAO = "MEDICACAO",
+}
+
+export enum VisitStatus {
+  AGENDADA = "AGENDADA",
+  CONFIRMADA = "CONFIRMADA",
+  EM_ANDAMENTO = "EM_ANDAMENTO",
+  CONCLUIDA = "CONCLUIDA",
+  CANCELADA = "CANCELADA",
+}
+
+export const VISIT_DURATION_IN_MINUTES: Record<VisitType, number> = {
+  [VisitType.AVALIACAO]: 60,
+  [VisitType.FISIOTERAPIA]: 45,
+  [VisitType.CURATIVO]: 30,
+  [VisitType.MEDICACAO]: 20,
+};
