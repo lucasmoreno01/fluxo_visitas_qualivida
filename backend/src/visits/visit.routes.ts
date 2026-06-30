@@ -14,3 +14,13 @@ visitRoutes.post(
   authorizeRole(UserRole.ADMIN),
   visitController.schedule,
 );
+
+visitRoutes.get("/", authenticate, visitController.list);
+
+visitRoutes.get("/:id", authenticate, visitController.findById);
+
+visitRoutes.patch(
+  "/:id/status",
+  authenticate,
+  visitController.updateStatus,
+);
