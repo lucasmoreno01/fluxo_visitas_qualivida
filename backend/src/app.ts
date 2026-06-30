@@ -1,6 +1,7 @@
 import express from "express";
 import { authRoutes } from "./auth/auth.routes";
 import { errorHandler } from "./middlewares/errorHandler";
+import { visitRoutes } from "./visits/visit.routes";
 
 export const app = express();
 
@@ -11,5 +12,6 @@ app.get("/", (_req, res) => {
 });
 
 app.use("/auth", authRoutes);
+app.use("/visitas", visitRoutes);
 
 app.use(errorHandler);

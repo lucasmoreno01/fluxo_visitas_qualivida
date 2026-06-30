@@ -1,6 +1,6 @@
 import { ClientSession, QueryFilter, Types, UpdateQuery } from "mongoose";
 import { VisitStatus } from "../domain/enums";
-import { Visit, VisitDocument, VisitModel } from "../models";
+import { VisitDocument, VisitEntity, VisitModel } from "../models";
 
 export type VisitListFilters = {
   data?: Date;
@@ -10,8 +10,18 @@ export type VisitListFilters = {
   limit?: number;
 };
 
+type VisitOverlapParams = {
+  profissionalId: Types.ObjectId | string;
+  dataHoraInicio: Date;
+  dataHoraFim: Date;
+  ignoredVisitId?: Types.ObjectId | string;
+};
+
 export class VisitRepository {
-  async create(data: Visit, session?: ClientSession): Promise<VisitDocument> {
+  async create(
+    data: VisitEntity,
+    session?: ClientSession,
+  ): Promise<VisitDocument> {
     const [visit] = await VisitModel.create([data], { session });
     return visit;
   }
@@ -20,10 +30,14 @@ export class VisitRepository {
     id: string | Types.ObjectId,
     session?: ClientSession,
   ): Promise<VisitDocument | null> {
-    return VisitModel.findById(id).session(session ?? null).exec();
+    return VisitModel.findById(id)
+      .session(session ?? null)
+      .exec();
   }
 
-  findByIdWithDetails(id: string | Types.ObjectId): Promise<VisitDocument | null> {
+  findByIdWithDetails(
+    id: string | Types.ObjectId,
+  ): Promise<VisitDocument | null> {
     return VisitModel.findById(id)
       .populate("pacienteId")
       .populate("profissionalId")
@@ -60,13 +74,8 @@ export class VisitRepository {
       .exec();
   }
 
-  hasOverlappingVisit(params: {
-    profissionalId: string | Types.ObjectId;
-    dataHoraInicio: Date;
-    dataHoraFim: Date;
-    ignoredVisitId?: string | Types.ObjectId;
-  }): Promise<boolean> {
-    const query: QueryFilter<Visit> = {
+  hasOverlappingVisit(params: VisitOverlapParams): Promise<boolean> {
+    const query: QueryFilter<VisitEntity> = {
       profissionalId: params.profissionalId,
       status: { $nin: [VisitStatus.CANCELADA, VisitStatus.CONCLUIDA] },
       dataHoraInicio: { $lt: params.dataHoraFim },
@@ -82,7 +91,7 @@ export class VisitRepository {
 
   updateStatus(
     id: string | Types.ObjectId,
-    update: UpdateQuery<Visit>,
+    update: UpdateQuery<VisitEntity>,
     session?: ClientSession,
   ): Promise<VisitDocument | null> {
     return VisitModel.findByIdAndUpdate(id, update, {
@@ -92,8 +101,8 @@ export class VisitRepository {
     }).exec();
   }
 
-  private buildListQuery(filters: VisitListFilters): QueryFilter<Visit> {
-    const query: QueryFilter<Visit> = {};
+  private buildListQuery(filters: VisitListFilters): QueryFilter<VisitEntity> {
+    const query: QueryFilter<VisitEntity> = {};
 
     if (filters.profissionalId) {
       query.profissionalId = filters.profissionalId;

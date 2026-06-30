@@ -1,4 +1,4 @@
-import { Schema, model, HydratedDocument, Types } from "mongoose";
+import { HydratedDocument, Schema, Types, model } from "mongoose";
 import { VisitStatus, VisitType } from "../domain/enums";
 
 export interface VisitHistoryItem {
@@ -8,7 +8,7 @@ export interface VisitHistoryItem {
   usuarioId: Types.ObjectId;
 }
 
-export interface Visit {
+export interface VisitEntity {
   pacienteId: Types.ObjectId;
   profissionalId: Types.ObjectId;
   tipo: VisitType;
@@ -86,6 +86,6 @@ const visitSchema = new Schema(
 visitSchema.index({ profissionalId: 1, dataHoraInicio: 1, dataHoraFim: 1 });
 visitSchema.index({ status: 1, dataHoraInicio: 1 });
 
-export type VisitDocument = HydratedDocument<Visit>;
+export type VisitDocument = HydratedDocument<VisitEntity>;
 
-export const VisitModel = model<Visit>("Visit", visitSchema);
+export const VisitModel = model<VisitEntity>("Visit", visitSchema);
