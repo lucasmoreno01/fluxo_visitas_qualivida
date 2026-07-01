@@ -1,0 +1,108 @@
+<section class="page-header">
+  <div>
+    <span>Painel administrativo</span>
+    <h1>Agenda geral</h1>
+  </div>
+  <button type="button">Nova visita</button>
+</section>
+
+<section class="admin-layout">
+  <div class="main-panel">
+    <form [formGroup]="filtersForm" class="filters">
+      <label>
+        Data
+        <input type="date" formControlName="data" />
+      </label>
+      <label>
+        Profissional
+        <select formControlName="profissionalId">
+          <option value="">Todos</option>
+          @for (professional of professionals; track professional) {
+            <option [value]="professional">{{ professional }}</option>
+          }
+        </select>
+      </label>
+      <label>
+        Status
+        <select formControlName="status">
+          <option value="">Todos</option>
+          <option value="AGENDADA">AGENDADA</option>
+          <option value="CONFIRMADA">CONFIRMADA</option>
+          <option value="EM_ANDAMENTO">EM_ANDAMENTO</option>
+          <option value="CONCLUIDA">CONCLUIDA</option>
+          <option value="CANCELADA">CANCELADA</option>
+        </select>
+      </label>
+    </form>
+
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Hora</th>
+            <th>Paciente</th>
+            <th>Profissional</th>
+            <th>Tipo</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (visit of visits; track visit.horario + visit.paciente) {
+            <tr>
+              <td>{{ visit.horario }}</td>
+              <td>
+                <strong>{{ visit.paciente }}</strong>
+                <small>{{ visit.bairro }}</small>
+              </td>
+              <td>{{ visit.profissional }}</td>
+              <td>{{ visit.tipo }}</td>
+              <td><span class="status">{{ visit.status }}</span></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <aside class="schedule-panel">
+    <h2>Agendar visita</h2>
+    <form [formGroup]="scheduleForm">
+      <label>
+        Paciente
+        <select formControlName="pacienteId">
+          <option value="">Selecione</option>
+          <option value="pituba">Maria de Lourdes Santos</option>
+          <option value="barra">Jose Carlos Oliveira</option>
+          <option value="brotas">Helena Costa</option>
+        </select>
+      </label>
+
+      <label>
+        Profissional
+        <select formControlName="profissionalId">
+          <option value="">Selecione</option>
+          @for (professional of professionals; track professional) {
+            <option [value]="professional">{{ professional }}</option>
+          }
+        </select>
+      </label>
+
+      <label>
+        Tipo
+        <select formControlName="tipo">
+          <option value="AVALIACAO">AVALIACAO · 60min</option>
+          <option value="FISIOTERAPIA">FISIOTERAPIA · 45min</option>
+          <option value="CURATIVO">CURATIVO · 30min</option>
+          <option value="MEDICACAO">MEDICACAO · 20min</option>
+        </select>
+      </label>
+
+      <label>
+        Inicio
+        <input type="datetime-local" formControlName="dataHoraInicio" />
+      </label>
+
+      <button type="button">Salvar agendamento</button>
+    </form>
+  </aside>
+</section>

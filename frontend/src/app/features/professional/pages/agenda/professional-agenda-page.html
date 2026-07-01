@@ -1,0 +1,103 @@
+<section class="page-header">
+  <div>
+    <span>App do profissional</span>
+    <h1>Minha agenda do dia</h1>
+  </div>
+  <strong>Hoje</strong>
+</section>
+
+<section class="agenda-layout">
+  <div class="visits-panel">
+    <header>
+      <h2>Visitas</h2>
+      <span>{{ visits.length }} agendadas</span>
+    </header>
+
+    <div class="visit-list">
+      @for (visit of visits; track visit.id) {
+        <button
+          type="button"
+          class="visit-item"
+          [class.selected]="visit.id === selectedVisitId"
+          (click)="selectVisit(visit.id)"
+        >
+          <span class="time">{{ visit.horario }}</span>
+          <span class="content">
+            <strong>{{ visit.paciente }}</strong>
+            <small>{{ visit.tipo }} · {{ visit.bairro }}</small>
+          </span>
+          <span class="status" [class]="visit.status.toLowerCase()">{{ visit.status }}</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  <article class="details-panel">
+    <header class="visit-summary">
+      <div>
+        <span>{{ selectedVisit.tipo }}</span>
+        <h2>{{ selectedVisit.paciente }}</h2>
+        <p>{{ selectedVisit.bairro }} · {{ selectedVisit.convenio }}</p>
+      </div>
+      <span class="status large" [class]="selectedVisit.status.toLowerCase()">
+        {{ selectedVisit.status }}
+      </span>
+    </header>
+
+    <div class="actions">
+      <button type="button" (click)="startVisit()" [disabled]="!canStart(selectedVisit)">
+        Iniciar atendimento
+      </button>
+      <small>Disponivel apenas para visitas confirmadas.</small>
+    </div>
+
+    <form [formGroup]="evolutionForm" (ngSubmit)="finishVisit()" class="evolution-form">
+      <h3>Evolucao clinica</h3>
+
+      <label class="full">
+        Observacoes obrigatorias
+        <textarea rows="5" formControlName="observacoes"></textarea>
+      </label>
+
+      <div class="form-grid">
+        <label>
+          Pressao
+          <input formControlName="pressao" placeholder="120x80" />
+        </label>
+        <label>
+          Temperatura
+          <input formControlName="temperatura" placeholder="36.5" />
+        </label>
+        <label>
+          Saturacao
+          <input formControlName="saturacao" placeholder="98" />
+        </label>
+        <label>
+          Frequencia cardiaca
+          <input formControlName="frequenciaCardiaca" placeholder="76" />
+        </label>
+      </div>
+
+      <label class="full">
+        Procedimentos realizados
+        <textarea rows="3" formControlName="procedimentosRealizados"></textarea>
+      </label>
+
+      <label class="full">
+        Intercorrencias
+        <textarea rows="3" formControlName="intercorrencias"></textarea>
+      </label>
+
+      <label>
+        Proxima visita recomendada
+        <input type="date" formControlName="proximaVisitaRecomendada" />
+      </label>
+
+      <footer>
+        <button type="submit" [disabled]="!canFinish(selectedVisit)">
+          Finalizar com evolucao
+        </button>
+      </footer>
+    </form>
+  </article>
+</section>
