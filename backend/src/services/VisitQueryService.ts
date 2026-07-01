@@ -1,7 +1,7 @@
 import { Types } from "mongoose";
 import { AppError } from "../errors/AppError";
 import { VisitDocument } from "../models";
-import { VisitListFilters, VisitRepository } from "../repositories";
+import { VisitListFilters, VisitRepository } from "../repositories/VisitRepository";
 
 export class VisitQueryService {
   constructor(

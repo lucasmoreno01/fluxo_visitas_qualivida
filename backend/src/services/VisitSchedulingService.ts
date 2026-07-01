@@ -7,11 +7,10 @@ import {
 } from "../domain/enums";
 import { AppError } from "../errors/AppError";
 import { VisitDocument, VisitEntity } from "../models";
-import {
-  PatientRepository,
-  ProfessionalRepository,
-  VisitRepository,
-} from "../repositories";
+import { VisitRepository } from "../repositories/VisitRepository";
+import { PatientRepository } from "../repositories/PatientRepository";
+import { ProfessionalRepository } from "../repositories/ProfessionalRepository";
+
 
 export type ScheduleVisitInput = {
   pacienteId: string;

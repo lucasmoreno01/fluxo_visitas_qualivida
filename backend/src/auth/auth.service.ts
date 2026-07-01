@@ -1,9 +1,8 @@
 import { UserRole } from "../domain/enums";
 import { AppError } from "../errors/AppError";
-import {
-  ProfessionalRepository,
-  UserRepository,
-} from "../repositories";
+import { ProfessionalRepository } from "../repositories/ProfessionalRepository";
+import { UserRepository } from "../repositories/UserRepository";
+
 import { LoginInput, LoginOutput } from "./auth.types";
 import { signAuthToken } from "./jwt";
 import { comparePassword } from "./password";

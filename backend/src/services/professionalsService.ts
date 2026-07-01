@@ -1,7 +1,8 @@
 import { Types } from "mongoose";
 import { AppError } from "../errors/AppError";
 import { VisitDocument } from "../models";
-import { ProfessionalRepository, VisitRepository } from "../repositories";
+import { ProfessionalListFilters, ProfessionalRepository } from "../repositories/ProfessionalRepository";
+import { VisitRepository } from "../repositories/VisitRepository";
 
 export class ProfessionalsService {
   constructor(
@@ -28,5 +29,19 @@ export class ProfessionalsService {
       profissionalId,
       data ? new Date(data) : new Date(),
     );
+  }
+
+  async list(filters: ProfessionalListFilters) {
+    const [items, total] = await Promise.all([
+      this.professionalRepository.findMany(filters),
+      this.professionalRepository.count(filters),
+    ]);
+
+    return {
+      items,
+      total,
+      page: filters.page ?? 1,
+      limit: filters.limit ?? 10,
+    };
   }
 }

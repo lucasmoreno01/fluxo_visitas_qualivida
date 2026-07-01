@@ -1,8 +1,9 @@
 import { NextFunction, Request, Response } from "express";
 import { VisitStatus } from "../domain/enums";
 import { AppError } from "../errors/AppError";
-import { VisitSchedulingService, VisitStatusService } from "../services";
 import { VisitQueryService } from "../services/VisitQueryService";
+import { VisitSchedulingService } from "../services/VisitSchedulingService";
+import { VisitStatusService } from "../services/VisitStatusService";
 type VisitParams = {
   id: string;
 };

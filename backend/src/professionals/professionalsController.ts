@@ -21,4 +21,21 @@ export class ProfessionalsController {
       next(error);
     }
   };
+  
+  list = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const professionals = await this.professionalService.list({
+        ativo:
+          req.query.ativo !== undefined
+            ? req.query.ativo === "true"
+            : undefined,
+        page: Number(req.query.page ?? 1),
+        limit: Number(req.query.limit ?? 10),
+      });
+
+      res.json(professionals);
+    } catch (error) {
+      next(error);
+    }
+  };
 }
