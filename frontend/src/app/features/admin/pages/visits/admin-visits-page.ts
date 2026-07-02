@@ -12,6 +12,7 @@ import { InputMaskDirective } from '../../../../shared/directives/input-mask.dir
 import { MASK_CEP, MASK_PHONE_BR } from '../../../../shared/directives/input-masks';
 import { PatientDetailsDto } from '../../../../shared/dto/patient.dto';
 import { AuthService } from '../../../auth/services/auth-service';
+import { serializeScheduleDateTime } from './visit-date.utils';
 
 @Component({
   selector: 'app-admin-visits-page',
@@ -198,8 +199,14 @@ export class AdminVisitsPage implements OnInit {
 
     this.saving = true;
 
+    const formValue = this.scheduleForm.getRawValue();
+    const payload = {
+      ...formValue,
+      dataHoraInicio: serializeScheduleDateTime(formValue.dataHoraInicio),
+    };
+
     this.adminService
-      .scheduleVisit(this.scheduleForm.getRawValue())
+      .scheduleVisit(payload)
       .pipe(
         finalize(() => {
           this.saving = false;

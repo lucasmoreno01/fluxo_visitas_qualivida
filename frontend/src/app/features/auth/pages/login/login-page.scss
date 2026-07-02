@@ -1,10 +1,9 @@
 .login-page {
   min-height: calc(100dvh - 56px);
-  display: grid;
-  grid-template-columns: minmax(320px, 520px) minmax(260px, 360px);
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 28px;
+  padding: 24px;
 }
 
 .login-panel,
@@ -16,6 +15,7 @@
 }
 
 .login-panel {
+  width: min(100%, 480px);
   padding: 32px;
 }
 
