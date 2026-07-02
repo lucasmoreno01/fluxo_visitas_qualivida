@@ -38,7 +38,7 @@ docker-compose exec api npm run seed
 - **GraphQL Playground:** [http://localhost:3000/graphql](http://localhost:3000/graphql)
 - **Mongo Express:** [http://localhost:8081](http://localhost:8081)
 
----
+
 
 ## 👥 Credenciais para Teste (Seed)
 

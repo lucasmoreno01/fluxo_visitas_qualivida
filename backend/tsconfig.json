@@ -10,7 +10,9 @@
     "skipLibCheck": true,
     "ignoreDeprecations": "6.0",
     "sourceMap": true,
-    "types": [],
+    "types": [
+      "node"
+    ],
     "typeRoots": [
       "./src/@types",
       "./node_modules/@types"
