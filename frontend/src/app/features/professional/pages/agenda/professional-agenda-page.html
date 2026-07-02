@@ -2,8 +2,14 @@
   <div>
     <span>App do profissional</span>
     <h1>Minha agenda do dia</h1>
+    @if (currentUser) {
+      <p>{{ currentUser.nome }}</p>
+    }
   </div>
-  <strong>Hoje</strong>
+  <div class="header-actions">
+    <strong>{{ todayLabel }}</strong>
+    <button type="button" class="secondary-button" (click)="logout()">Sair</button>
+  </div>
 </section>
 
 <section class="agenda-layout">
@@ -13,91 +19,132 @@
       <span>{{ visits.length }} agendadas</span>
     </header>
 
-    <div class="visit-list">
-      @for (visit of visits; track visit.id) {
-        <button
-          type="button"
-          class="visit-item"
-          [class.selected]="visit.id === selectedVisitId"
-          (click)="selectVisit(visit.id)"
-        >
-          <span class="time">{{ visit.horario }}</span>
-          <span class="content">
-            <strong>{{ visit.paciente }}</strong>
-            <small>{{ visit.tipo }} · {{ visit.bairro }}</small>
-          </span>
-          <span class="status" [class]="visit.status.toLowerCase()">{{ visit.status }}</span>
-        </button>
-      }
-    </div>
+    @if (loading) {
+      <p class="panel-state">Carregando agenda...</p>
+    } @else if (!visits.length) {
+      <p class="panel-state">Nenhuma visita para hoje.</p>
+    } @else {
+      <div class="visit-list">
+        @for (visit of visits; track visit.id) {
+          <button
+            type="button"
+            class="visit-item"
+            [class.selected]="visit.id === selectedVisitId"
+            (click)="selectVisit(visit.id)"
+          >
+            <span class="time">{{ visit.horario }}</span>
+            <span class="content">
+              <strong>{{ visit.paciente }}</strong>
+              <small>{{ visit.tipo }} · {{ visit.bairro }}</small>
+            </span>
+            <span class="status" [class]="statusClass(visit.status)">{{ visit.status }}</span>
+          </button>
+        }
+      </div>
+    }
   </div>
 
-  <article class="details-panel">
-    <header class="visit-summary">
-      <div>
-        <span>{{ selectedVisit.tipo }}</span>
-        <h2>{{ selectedVisit.paciente }}</h2>
-        <p>{{ selectedVisit.bairro }} · {{ selectedVisit.convenio }}</p>
-      </div>
-      <span class="status large" [class]="selectedVisit.status.toLowerCase()">
-        {{ selectedVisit.status }}
-      </span>
-    </header>
+  @if (selectedVisit) {
+    <article class="details-panel">
+      <header class="visit-summary">
+        <div>
+          <span>{{ selectedVisit.tipo }}</span>
+          <h2>{{ selectedVisit.paciente }}</h2>
+          <p>{{ selectedVisit.bairro }} · {{ selectedVisit.convenio }}</p>
+        </div>
+        <span class="status large" [class]="statusClass(selectedVisit.status)">
+          {{ selectedVisit.status }}
+        </span>
+      </header>
 
-    <div class="actions">
-      <button type="button" (click)="startVisit()" [disabled]="!canStart(selectedVisit)">
-        Iniciar atendimento
-      </button>
-      <small>Disponivel apenas para visitas confirmadas.</small>
-    </div>
+      @if (errorMessage) {
+        <p class="feedback error">{{ errorMessage }}</p>
+      }
 
-    <form [formGroup]="evolutionForm" (ngSubmit)="finishVisit()" class="evolution-form">
-      <h3>Evolucao clinica</h3>
+      @if (successMessage) {
+        <p class="feedback success">{{ successMessage }}</p>
+      }
 
-      <label class="full">
-        Observacoes obrigatorias
-        <textarea rows="5" formControlName="observacoes"></textarea>
-      </label>
-
-      <div class="form-grid">
-        <label>
-          Pressao
-          <input formControlName="pressao" placeholder="120x80" />
-        </label>
-        <label>
-          Temperatura
-          <input formControlName="temperatura" placeholder="36.5" />
-        </label>
-        <label>
-          Saturacao
-          <input formControlName="saturacao" placeholder="98" />
-        </label>
-        <label>
-          Frequencia cardiaca
-          <input formControlName="frequenciaCardiaca" placeholder="76" />
-        </label>
-      </div>
-
-      <label class="full">
-        Procedimentos realizados
-        <textarea rows="3" formControlName="procedimentosRealizados"></textarea>
-      </label>
-
-      <label class="full">
-        Intercorrencias
-        <textarea rows="3" formControlName="intercorrencias"></textarea>
-      </label>
-
-      <label>
-        Proxima visita recomendada
-        <input type="date" formControlName="proximaVisitaRecomendada" />
-      </label>
-
-      <footer>
-        <button type="submit" [disabled]="!canFinish(selectedVisit)">
-          Finalizar com evolucao
+      <div class="actions">
+        <button type="button" (click)="startVisit()" [disabled]="!canStart(selectedVisit)">
+          {{ saving ? 'Salvando...' : 'Iniciar atendimento' }}
         </button>
-      </footer>
-    </form>
-  </article>
+        <small>
+          @if (selectedVisit.status === 'CONFIRMADA') {
+            Disponivel para iniciar agora.
+          } @else if (selectedVisit.status === 'EM_ANDAMENTO') {
+            Atendimento em andamento. Registre a evolucao para finalizar.
+          } @else {
+            Acao indisponivel para este status.
+          }
+        </small>
+      </div>
+
+      <form [formGroup]="evolutionForm" (ngSubmit)="finishVisit()" class="evolution-form">
+        <h3>Evolucao clinica</h3>
+
+        <fieldset [disabled]="!canEditEvolution(selectedVisit)">
+          <label class="full">
+            Observacoes obrigatorias
+            <textarea rows="5" formControlName="observacoes"></textarea>
+          </label>
+
+          @if (
+            evolutionForm.controls.observacoes.touched && evolutionForm.controls.observacoes.invalid
+          ) {
+            <small class="field-error">Informe as observacoes da evolucao.</small>
+          }
+
+          <div class="form-grid">
+            <label>
+              Pressao
+              <input formControlName="pressao" placeholder="120x80" />
+            </label>
+            <label>
+              Temperatura
+              <input formControlName="temperatura" placeholder="36.5" inputmode="decimal" />
+            </label>
+            <label>
+              Saturacao
+              <input formControlName="saturacao" placeholder="98" inputmode="numeric" />
+            </label>
+            <label>
+              Frequencia cardiaca
+              <input formControlName="frequenciaCardiaca" placeholder="76" inputmode="numeric" />
+            </label>
+          </div>
+
+          <label class="full">
+            Procedimentos realizados
+            <textarea rows="3" formControlName="procedimentosRealizados"></textarea>
+          </label>
+
+          <label class="full">
+            Intercorrencias
+            <textarea rows="3" formControlName="intercorrencias"></textarea>
+          </label>
+
+          <label>
+            Proxima visita recomendada
+            <input type="date" formControlName="proximaVisitaRecomendada" />
+          </label>
+        </fieldset>
+
+        @if (!canEditEvolution(selectedVisit)) {
+          <p class="form-hint">A evolucao fica disponivel quando a visita esta em andamento.</p>
+        }
+
+        <footer>
+          <button type="submit" [disabled]="!canFinish(selectedVisit)">
+            {{ saving ? 'Finalizando...' : 'Finalizar com evolucao' }}
+          </button>
+        </footer>
+      </form>
+    </article>
+  } @else {
+    <article class="details-panel empty-details">
+      <h2>Selecione uma visita</h2>
+      <p>A evolucao clinica sera exibida quando houver uma visita na agenda de hoje.</p>
+    </article>
+  }
 </section>

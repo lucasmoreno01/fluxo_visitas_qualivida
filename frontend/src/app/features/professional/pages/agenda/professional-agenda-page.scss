@@ -13,6 +13,17 @@
   text-transform: uppercase;
 }
 
+.page-header p {
+  margin-top: 6px;
+  color: #68758a;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 h1,
 h2,
 h3,
@@ -58,6 +69,15 @@ h1 {
 .visit-list {
   display: grid;
   gap: 10px;
+}
+
+.panel-state {
+  margin: 0;
+  padding: 22px 12px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  color: #68758a;
+  text-align: center;
 }
 
 .visit-item {
@@ -116,6 +136,11 @@ h1 {
   color: #175cd3;
 }
 
+.status.agendada {
+  background: #f8fafc;
+  color: #475467;
+}
+
 .status.em_andamento {
   background: #fff7ed;
   color: #c2410c;
@@ -124,6 +149,11 @@ h1 {
 .status.concluida {
   background: #ecfdf3;
   color: #067647;
+}
+
+.status.cancelada {
+  background: #fef2f2;
+  color: #b42318;
 }
 
 .details-panel {
@@ -177,11 +207,58 @@ button {
   color: #ffffff;
   padding: 11px 14px;
   font-weight: 800;
+  cursor: pointer;
+}
+
+button:disabled {
+  background: #cbd5e1;
+  color: #68758a;
+  cursor: not-allowed;
+}
+
+.secondary-button {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #41516a;
+}
+
+.feedback {
+  margin: 16px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.feedback.error {
+  background: #fef2f2;
+  color: #b42318;
+}
+
+.feedback.success {
+  background: #ecfdf3;
+  color: #067647;
+}
+
+.empty-details {
+  min-height: 220px;
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  color: #68758a;
 }
 
 .evolution-form {
   display: grid;
   gap: 16px;
+}
+
+fieldset {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
 .form-grid {
@@ -212,10 +289,27 @@ textarea {
   outline: none;
 }
 
+input:disabled,
+textarea:disabled {
+  background: #f8fafc;
+  color: #68758a;
+}
+
 input:focus,
 textarea:focus {
   border-color: #0f766e;
   box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+}
+
+.field-error,
+.form-hint {
+  color: #b42318;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.form-hint {
+  color: #68758a;
 }
 
 footer {
@@ -230,7 +324,9 @@ footer {
   }
 
   .visit-summary,
-  .actions {
+  .actions,
+  .page-header,
+  .header-actions {
     align-items: flex-start;
     flex-direction: column;
   }

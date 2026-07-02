@@ -185,7 +185,7 @@ function authorizeVisitRead(
     return;
   }
 
-  if (visit.profissionalId.toString() !== actorProfessionalId) {
+  if (stringifyObjectId(visit.profissionalId) !== actorProfessionalId) {
     throw new AppError("Profissional nao pode ver visita de outro profissional.", 403);
   }
 }

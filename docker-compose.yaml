@@ -4,12 +4,14 @@ services:
   mongo:
     image: mongo:7
     container_name: mongo
+    hostname: mongo
     ports:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      test: mongosh --eval "try { if (rs.status().ok) quit(0); } catch (e) { if (e.code === 94) { try { rs.initiate(); quit(0); } catch (err) {} } } quit(1);" --quiet
       interval: 10s
       timeout: 5s
       retries: 5
@@ -23,7 +25,7 @@ services:
       mongo:
         condition: service_healthy
     environment:
-      MONGO_URL: mongodb://mongo:27017/qualivida
+      MONGO_URL: mongodb://mongo:27017/qualivida?replicaSet=rs0
       JWT_SECRET: secret
     volumes:
       - ./backend:/app
@@ -38,6 +40,17 @@ services:
       ME_CONFIG_MONGODB_SERVER: mongo
     depends_on:
       - mongo
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "4200:4200"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - api
 
 volumes:
   mongo_data:

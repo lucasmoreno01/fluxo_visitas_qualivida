@@ -1,7 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth-service';
+import { UserRole } from '../../../../shared/dto/user.dto';
 
 @Component({
   selector: 'app-login-page',
@@ -9,7 +10,7 @@ import { AuthService } from '../../services/auth-service';
   templateUrl: './login-page.html',
   styleUrl: './login-page.scss',
 })
-export class LoginPage {
+export class LoginPage implements OnInit {
   private readonly formBuilder = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
@@ -22,6 +23,10 @@ export class LoginPage {
     senha: ['Prof@123', [Validators.required]],
   });
 
+  ngOnInit(): void {
+    this.redirectAuthenticatedUser();
+  }
+
   protected submit() {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -33,15 +38,7 @@ export class LoginPage {
 
     this.authService.login(this.form.getRawValue()).subscribe({
       next: (response) => {
-        localStorage.setItem('token', response.token);
-        localStorage.setItem('user', JSON.stringify(response.user));
-
-        if (response.user.role === 'ADMIN') {
-          this.router.navigateByUrl('/admin/visitas');
-          return;
-        }
-
-        this.router.navigateByUrl('/profissional/agenda');
+        this.navigateByRole(response.user.role);
       },
       error: () => {
         this.errorMessage = 'Nao foi possivel entrar. Confira email e senha.';
@@ -51,5 +48,24 @@ export class LoginPage {
         this.loading = false;
       },
     });
+  }
+
+  private redirectAuthenticatedUser(): void {
+    const user = this.authService.getCurrentUser();
+
+    if (!this.authService.isAuthenticated() || !user) {
+      return;
+    }
+
+    this.navigateByRole(user.role);
+  }
+
+  private navigateByRole(role: UserRole): void {
+    if (role === UserRole.ADMIN) {
+      this.router.navigateByUrl('/admin/visitas', { replaceUrl: true });
+      return;
+    }
+
+    this.router.navigateByUrl('/profissional/agenda', { replaceUrl: true });
   }
 }

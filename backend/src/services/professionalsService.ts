@@ -1,6 +1,7 @@
 import { Types } from "mongoose";
 import { AppError } from "../errors/AppError";
 import { VisitDocument } from "../models";
+import { VisitStatus } from "../domain/enums";
 import { ProfessionalListFilters, ProfessionalRepository } from "../repositories/ProfessionalRepository";
 import { VisitRepository } from "../repositories/VisitRepository";
 
@@ -13,7 +14,7 @@ export class ProfessionalsService {
   async getAgenda(
     profissionalId: string,
     data?: string,
-  ): Promise<VisitDocument[]> {
+  ): Promise<{ visitas: VisitDocument[]; vagasRestantes: number }> {
     if (!Types.ObjectId.isValid(profissionalId)) {
       throw new AppError("Profissional invalido.", 400);
     }
@@ -25,10 +26,21 @@ export class ProfessionalsService {
       throw new AppError("Profissional nao encontrado.", 404);
     }
 
-    return this.visitRepository.findAgendaDoDia(
+    const date = data ? new Date(data) : new Date();
+    const agenda = await this.visitRepository.findAgendaDoDia(
       profissionalId,
-      data ? new Date(data) : new Date(),
+      date,
     );
+
+    const activeVisits = agenda.filter(
+      (visit) => visit.status !== VisitStatus.CANCELADA,
+    );
+    const vagasRestantes = Math.max(0, professional.maxVisitasDia - activeVisits.length);
+
+    return {
+      visitas: agenda,
+      vagasRestantes,
+    };
   }
 
   async list(filters: ProfessionalListFilters) {

@@ -1,108 +1,481 @@
 <section class="page-header">
   <div>
     <span>Painel administrativo</span>
-    <h1>Agenda geral</h1>
+    <h1>Gestao Qualivida</h1>
   </div>
-  <button type="button">Nova visita</button>
+  <div class="header-actions">
+    <div class="tabs">
+      <button
+        type="button"
+        class="tab-button"
+        [class.active]="activeTab === 'visitas'"
+        (click)="changeTab('visitas')"
+      >
+        Agenda Geral
+      </button>
+      <button
+        type="button"
+        class="tab-button"
+        [class.active]="activeTab === 'pacientes'"
+        (click)="changeTab('pacientes')"
+      >
+        Pacientes
+      </button>
+      <button
+        type="button"
+        class="tab-button"
+        [class.active]="activeTab === 'usuarios'"
+        (click)="changeTab('usuarios')"
+      >
+        Usuarios & Profissionais
+      </button>
+    </div>
+    <button type="button" class="secondary-button" (click)="logout()">Sair</button>
+  </div>
 </section>
 
-<section class="admin-layout">
-  <div class="main-panel">
-    <form [formGroup]="filtersForm" class="filters">
-      <label>
-        Data
-        <input type="date" formControlName="data" />
-      </label>
-      <label>
-        Profissional
-        <select formControlName="profissionalId">
-          <option value="">Todos</option>
-          @for (professional of professionals; track professional) {
-            <option [value]="professional">{{ professional }}</option>
-          }
-        </select>
-      </label>
-      <label>
-        Status
-        <select formControlName="status">
-          <option value="">Todos</option>
-          <option value="AGENDADA">AGENDADA</option>
-          <option value="CONFIRMADA">CONFIRMADA</option>
-          <option value="EM_ANDAMENTO">EM_ANDAMENTO</option>
-          <option value="CONCLUIDA">CONCLUIDA</option>
-          <option value="CANCELADA">CANCELADA</option>
-        </select>
-      </label>
-    </form>
+@if (errorMsg) {
+  <div class="feedback error">{{ errorMsg }}</div>
+}
+@if (successMsg) {
+  <div class="feedback success">{{ successMsg }}</div>
+}
 
-    <div class="table-card">
-      <table>
-        <thead>
-          <tr>
-            <th>Hora</th>
-            <th>Paciente</th>
-            <th>Profissional</th>
-            <th>Tipo</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (visit of visits; track visit.horario + visit.paciente) {
-            <tr>
-              <td>{{ visit.horario }}</td>
-              <td>
-                <strong>{{ visit.paciente }}</strong>
-                <small>{{ visit.bairro }}</small>
-              </td>
-              <td>{{ visit.profissional }}</td>
-              <td>{{ visit.tipo }}</td>
-              <td><span class="status">{{ visit.status }}</span></td>
-            </tr>
+<div class="admin-layout">
+  <!-- LEFT COLUMN: TABLES -->
+  <main class="main-panel">
+    <!-- TAB 1: VISITAS -->
+    @if (activeTab === 'visitas') {
+      <div class="card-wrapper">
+        <form [formGroup]="filtersForm" class="filters">
+          <label>
+            Filtrar Data
+            <input type="date" formControlName="data" />
+          </label>
+          <label>
+            Profissional
+            <select formControlName="profissionalId">
+              <option value="">Todos</option>
+              @for (prof of professionals; track prof.id || prof._id) {
+                <option [value]="prof.id || prof._id">
+                  {{ prof.usuarioId.nome }} ({{ prof.tipo }})
+                </option>
+              }
+            </select>
+          </label>
+          <label>
+            Status
+            <select formControlName="status">
+              <option value="">Todos</option>
+              <option value="AGENDADA">AGENDADA</option>
+              <option value="CONFIRMADA">CONFIRMADA</option>
+              <option value="EM_ANDAMENTO">EM_ANDAMENTO</option>
+              <option value="CONCLUIDA">CONCLUIDA</option>
+              <option value="CANCELADA">CANCELADA</option>
+            </select>
+          </label>
+        </form>
+
+        <div class="table-card">
+          <table>
+            <thead>
+              <tr>
+                <th>Data/Hora</th>
+                <th>Paciente</th>
+                <th>Profissional</th>
+                <th>Tipo</th>
+                <th>Status</th>
+                <th>Acoes</th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (loading) {
+                <tr>
+                  <td colspan="6" class="table-empty">Carregando visitas...</td>
+                </tr>
+              } @else if (!visits.length) {
+                <tr>
+                  <td colspan="6" class="table-empty">Nenhuma visita agendada.</td>
+                </tr>
+              } @else {
+                @for (visit of visits; track visit.id || visit._id) {
+                  <tr>
+                    <td>
+                      <strong>{{ formatTime(visit.dataHoraInicio) }}</strong>
+                      <small>{{ formatDateLabel(visit.dataHoraInicio) }}</small>
+                    </td>
+                    <td>
+                      <strong>{{ formatPatient(visit) }}</strong>
+                      <small>{{ formatPatientBairro(visit) }}</small>
+                    </td>
+                    <td>
+                      <strong>{{ formatProfessional(visit) }}</strong>
+                      <small>{{ visit.tipo }}</small>
+                    </td>
+                    <td>{{ visit.tipo }}</td>
+                    <td>
+                      <span class="status-badge" [class]="visit.status.toLowerCase()">
+                        {{ visit.status }}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="action-buttons">
+                        @if (visit.status === 'AGENDADA') {
+                          <button
+                            type="button"
+                            class="action-btn success"
+                            (click)="confirmVisit(visit.id || visit._id)"
+                          >
+                            Confirmar
+                          </button>
+                        }
+                        @if (visit.status === 'AGENDADA' || visit.status === 'CONFIRMADA') {
+                          <button
+                            type="button"
+                            class="action-btn danger"
+                            (click)="startCancellation(visit.id || visit._id)"
+                          >
+                            Cancelar
+                          </button>
+                        }
+                        @if (visit.status === 'CANCELADA') {
+                          <small class="cancel-reason"
+                            >Motivo: {{ visit.motivoCancelamento }}</small
+                          >
+                        }
+                        @if (visit.status === 'CONCLUIDA') {
+                          <span class="done-label">Finalizada</span>
+                        }
+                        @if (visit.status === 'EM_ANDAMENTO') {
+                          <span class="working-label">Em andamento</span>
+                        }
+                      </div>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+
+          <!-- Pagination -->
+          @if (totalPages > 1) {
+            <div class="pagination">
+              <button
+                type="button"
+                [disabled]="currentPage === 1"
+                (click)="changePage(currentPage - 1)"
+              >
+                Anterior
+              </button>
+              <span>Pagina {{ currentPage }} de {{ totalPages }}</span>
+              <button
+                type="button"
+                [disabled]="currentPage === totalPages"
+                (click)="changePage(currentPage + 1)"
+              >
+                Proxima
+              </button>
+            </div>
           }
-        </tbody>
-      </table>
+        </div>
+      </div>
+    }
+
+    <!-- TAB 2: PACIENTES -->
+    @if (activeTab === 'pacientes') {
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Telefone</th>
+              <th>Convenio</th>
+              <th>Bairro</th>
+              <th>Status</th>
+              <th>Acao</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (!patients.length) {
+              <tr>
+                <td colspan="6" class="table-empty">Nenhum paciente cadastrado.</td>
+              </tr>
+            } @else {
+              @for (patient of patients; track patient.id || patient._id) {
+                <tr>
+                  <td>
+                    <strong>{{ patient.nome }}</strong>
+                  </td>
+                  <td>{{ patient.telefone }}</td>
+                  <td>{{ patient.convenio }}</td>
+                  <td>{{ patient.endereco.bairro }}</td>
+                  <td>
+                    <span class="status-badge" [class]="patient.ativo ? 'concluida' : 'cancelada'">
+                      {{ patient.ativo ? 'ATIVO' : 'INATIVO' }}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="action-btn"
+                      [class.danger]="patient.ativo"
+                      [class.success]="!patient.ativo"
+                      (click)="togglePatientStatus(patient)"
+                    >
+                      {{ patient.ativo ? 'Desativar' : 'Reativar' }}
+                    </button>
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    <!-- TAB 3: USUARIOS & PROFISSIONAIS -->
+    @if (activeTab === 'usuarios') {
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Email</th>
+              <th>Funcao (Role)</th>
+              <th>Tipo Profissional</th>
+              <th>Especialidade</th>
+              <th>Max Visitas/Dia</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (!professionals.length) {
+              <tr>
+                <td colspan="6" class="table-empty">Nenhum profissional cadastrado.</td>
+              </tr>
+            } @else {
+              @for (prof of professionals; track prof.id || prof._id) {
+                <tr>
+                  <td>
+                    <strong>{{ prof.usuarioId.nome }}</strong>
+                    <small>Status: {{ prof.usuarioId.ativo ? 'Ativo' : 'Inativo' }}</small>
+                  </td>
+                  <td>{{ prof.usuarioId.email }}</td>
+                  <td>{{ prof.usuarioId.role }}</td>
+                  <td>{{ prof.tipo }}</td>
+                  <td>{{ prof.especialidade }}</td>
+                  <td>{{ prof.maxVisitasDia }}</td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </main>
+
+  <!-- RIGHT COLUMN: FORMS -->
+  <aside class="schedule-panel">
+    <!-- TAB 1 FORM: SCHEDULING -->
+    @if (activeTab === 'visitas') {
+      <h2>Agendar Visita</h2>
+      <form [formGroup]="scheduleForm" (ngSubmit)="scheduleVisit()">
+        <label>
+          Paciente
+          <select formControlName="pacienteId">
+            <option value="">Selecione um paciente</option>
+            @for (p of patients; track p.id || p._id) {
+              @if (p.ativo) {
+                <option [value]="p.id || p._id">{{ p.nome }}</option>
+              }
+            }
+          </select>
+        </label>
+
+        <label>
+          Profissional
+          <select formControlName="profissionalId">
+            <option value="">Selecione um profissional</option>
+            @for (prof of professionals; track prof.id || prof._id) {
+              @if (prof.ativo) {
+                <option [value]="prof.id || prof._id">
+                  {{ prof.usuarioId.nome }} ({{ prof.tipo }})
+                </option>
+              }
+            }
+          </select>
+        </label>
+
+        <label>
+          Tipo de Visita
+          <select formControlName="tipo">
+            <option value="AVALIACAO">AVALIACAO · 60min</option>
+            <option value="FISIOTERAPIA">FISIOTERAPIA · 45min</option>
+            <option value="CURATIVO">CURATIVO · 30min</option>
+            <option value="MEDICACAO">MEDICACAO · 20min</option>
+          </select>
+        </label>
+
+        <label>
+          Data e Hora de Inicio
+          <input type="datetime-local" formControlName="dataHoraInicio" />
+        </label>
+
+        <!-- Dynamic Professional Slot Summary -->
+        @if (vagasRestantes !== null) {
+          <div class="slots-info" [class.low-slots]="vagasRestantes === 0">
+            <strong>Agenda do Dia Selecionado:</strong>
+            <p>Vagas restantes: {{ vagasRestantes }}</p>
+            @if (professionalAgenda.length) {
+              <small>Visitas agendadas para o profissional:</small>
+              <ul>
+                @for (v of professionalAgenda; track v._id) {
+                  <li>{{ formatTime(v.dataHoraInicio) }} · {{ v.tipo }} ({{ v.status }})</li>
+                }
+              </ul>
+            } @else {
+              <small>Nenhuma visita no dia para este profissional.</small>
+            }
+          </div>
+        }
+
+        <button type="submit" [disabled]="saving">
+          {{ saving ? 'Salvando...' : 'Salvar agendamento' }}
+        </button>
+      </form>
+    }
+
+    <!-- TAB 2 FORM: CREATE PATIENT -->
+    @if (activeTab === 'pacientes') {
+      <h2>Cadastrar Paciente</h2>
+      <form [formGroup]="patientForm" (ngSubmit)="createPatient()">
+        <label>
+          Nome Completo
+          <input type="text" formControlName="nome" placeholder="Nome do paciente" />
+        </label>
+        <label>
+          Telefone
+          <input type="text" formControlName="telefone" placeholder="(71) 99999-9999" />
+        </label>
+        <label>
+          Convenio
+          <input type="text" formControlName="convenio" placeholder="QualiSaude, Sus, etc." />
+        </label>
+
+        <fieldset class="address-fieldset">
+          <legend>Endereco</legend>
+          <label>
+            Rua e Numero
+            <input type="text" formControlName="rua" placeholder="Rua..." />
+          </label>
+          <label>
+            Bairro
+            <input type="text" formControlName="bairro" placeholder="Bairro" />
+          </label>
+          <div class="form-row">
+            <label>
+              Cidade
+              <input type="text" formControlName="cidade" placeholder="Salvador" />
+            </label>
+            <label>
+              CEP
+              <input type="text" formControlName="cep" placeholder="40000-000" />
+            </label>
+          </div>
+        </fieldset>
+
+        <label>
+          Observacoes Clinicas/Sociais
+          <textarea
+            formControlName="observacoes"
+            rows="3"
+            placeholder="Restricoes, observacoes..."
+          ></textarea>
+        </label>
+
+        <button type="submit" [disabled]="saving">
+          {{ saving ? 'Cadastrando...' : 'Cadastrar Paciente' }}
+        </button>
+      </form>
+    }
+
+    <!-- TAB 3 FORM: CREATE USER & PROFESSIONAL -->
+    @if (activeTab === 'usuarios') {
+      <h2>Cadastrar Usuario</h2>
+      <form [formGroup]="userForm" (ngSubmit)="registerUser()">
+        <label>
+          Nome Completo
+          <input type="text" formControlName="nome" placeholder="Nome de exibicao" />
+        </label>
+        <label>
+          E-mail (Login)
+          <input type="email" formControlName="email" placeholder="nome@qualivida.com" />
+        </label>
+        <label>
+          Senha
+          <input type="password" formControlName="senha" placeholder="Minimo 6 caracteres" />
+        </label>
+        <label>
+          Perfil (Role)
+          <select formControlName="role">
+            <option value="ADMIN">ADMIN (Administrador)</option>
+            <option value="PROFISSIONAL">PROFISSIONAL (De saude)</option>
+          </select>
+        </label>
+
+        <!-- Conditional Professional Fields -->
+        @if (userForm.controls.role.value === 'PROFISSIONAL') {
+          <fieldset class="prof-fieldset">
+            <legend>Dados de Profissional</legend>
+            <label>
+              Tipo de Profissional
+              <select formControlName="tipo">
+                <option value="ENFERMEIRO">ENFERMEIRO</option>
+                <option value="FISIOTERAPEUTA">FISIOTERAPEUTA</option>
+                <option value="MEDICO">MEDICO</option>
+              </select>
+            </label>
+            <label>
+              Especialidade
+              <input
+                type="text"
+                formControlName="especialidade"
+                placeholder="Ex: Fisioterapia Respiratoria"
+              />
+            </label>
+            <label>
+              Limite Max. de Visitas/Dia
+              <input type="number" formControlName="maxVisitasDia" />
+            </label>
+          </fieldset>
+        }
+
+        <button type="submit" [disabled]="saving">
+          {{ saving ? 'Cadastrando...' : 'Cadastrar Usuario' }}
+        </button>
+      </form>
+    }
+  </aside>
+</div>
+
+<!-- INLINE CANCELLATION DIALOG -->
+@if (cancelingVisitId) {
+  <div class="modal-backdrop">
+    <div class="cancellation-dialog">
+      <h3>Cancelar Visita</h3>
+      <p>Informe o motivo do cancelamento para prosseguir:</p>
+      <textarea
+        [(ngModel)]="motivoCancelamento"
+        placeholder="Motivo do cancelamento (obrigatorio)"
+        rows="4"
+      ></textarea>
+      <div class="dialog-actions">
+        <button type="button" class="secondary-button" (click)="cancelCancellation()">
+          Fechar
+        </button>
+        <button type="button" class="danger-btn" (click)="submitCancellation()">
+          Confirmar Cancelamento
+        </button>
+      </div>
     </div>
   </div>
-
-  <aside class="schedule-panel">
-    <h2>Agendar visita</h2>
-    <form [formGroup]="scheduleForm">
-      <label>
-        Paciente
-        <select formControlName="pacienteId">
-          <option value="">Selecione</option>
-          <option value="pituba">Maria de Lourdes Santos</option>
-          <option value="barra">Jose Carlos Oliveira</option>
-          <option value="brotas">Helena Costa</option>
-        </select>
-      </label>
-
-      <label>
-        Profissional
-        <select formControlName="profissionalId">
-          <option value="">Selecione</option>
-          @for (professional of professionals; track professional) {
-            <option [value]="professional">{{ professional }}</option>
-          }
-        </select>
-      </label>
-
-      <label>
-        Tipo
-        <select formControlName="tipo">
-          <option value="AVALIACAO">AVALIACAO · 60min</option>
-          <option value="FISIOTERAPIA">FISIOTERAPIA · 45min</option>
-          <option value="CURATIVO">CURATIVO · 30min</option>
-          <option value="MEDICACAO">MEDICACAO · 20min</option>
-        </select>
-      </label>
-
-      <label>
-        Inicio
-        <input type="datetime-local" formControlName="dataHoraInicio" />
-      </label>
-
-      <button type="button">Salvar agendamento</button>
-    </form>
-  </aside>
-</section>
+}

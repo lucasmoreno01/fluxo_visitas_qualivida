@@ -3,10 +3,24 @@ import { authRoutes } from "./auth/auth.routes";
 import { errorHandler } from "./middlewares/errorHandler";
 import { professionalRoutes } from "./professionals/professionals.routes";
 import { visitRoutes } from "./visits/visit.routes";
+import { patientRoutes } from "./patients/patient.routes";
+import { userRoutes } from "./users/user.routes";
 
 export const app = express();
 
 app.use(express.json());
+
+// CORS Middleware
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  if (req.method === "OPTIONS") {
+    res.sendStatus(200);
+    return;
+  }
+  next();
+});
 
 app.get("/", (_req, res) => {
   res.json({ status: "API funcionando" });
@@ -15,5 +29,7 @@ app.get("/", (_req, res) => {
 app.use("/auth", authRoutes);
 app.use("/visitas", visitRoutes);
 app.use("/profissionais", professionalRoutes);
+app.use("/pacientes", patientRoutes);
+app.use("/usuarios", userRoutes);
 
 app.use(errorHandler);
