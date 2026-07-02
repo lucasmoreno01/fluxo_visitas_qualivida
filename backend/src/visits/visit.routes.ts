@@ -1,26 +1,28 @@
 import { Router } from "express";
 import { UserRole } from "../domain/enums";
-import { authenticate } from "../middlewares/authenticate";
-import { authorizeRole } from "../middlewares/authorizeRole";
+import {
+  guarded,
+  JwtAuthGuard,
+  RoleGuard,
+} from "../decorators/guards";
 import { VisitController } from "./VisitController";
 
 const visitController = new VisitController();
+const jwtAuth = new JwtAuthGuard();
+const adminOnly = new RoleGuard([UserRole.ADMIN]);
 
 export const visitRoutes = Router();
 
 visitRoutes.post(
   "/",
-  authenticate,
-  authorizeRole(UserRole.ADMIN),
-  visitController.schedule,
+  guarded(jwtAuth, adminOnly)(visitController.schedule),
 );
 
-visitRoutes.get("/", authenticate, visitController.list);
+visitRoutes.get("/", guarded(jwtAuth)(visitController.list));
 
-visitRoutes.get("/:id", authenticate, visitController.findById);
+visitRoutes.get("/:id", guarded(jwtAuth)(visitController.findById));
 
 visitRoutes.patch(
   "/:id/status",
-  authenticate,
-  visitController.updateStatus,
+  guarded(jwtAuth)(visitController.updateStatus),
 );

@@ -88,18 +88,46 @@ Dessa forma, qualquer regra implementada na camada de serviço (por exemplo, a v
 2. **Operação Atômica (Evolução + Status):** A conclusão de uma visita exige a criação de uma `Evolução`. A estratégia `EmAndamentoParaConcluidaStrategy` executa a criação da evolução e a alteração do status da visita para `CONCLUIDA` dentro de uma transação do MongoDB (através do `TransactionManager`). Se a criação da evolução ou o update da visita falharem, toda a operação sofre rollback.
 3. **RBAC:** Admin possui acesso completo. Profissionais só enxergam e alteram suas próprias visitas e agendas, retornando `403 Forbidden` em caso de acesso indevido (tratado de forma consistente em ambos os controladores REST e GraphQL).
 
+### Regras de Negócio Extras (Bônus)
+
+4. **Limite diário por profissional:** Ao agendar (`VisitSchedulingService`), o sistema conta visitas do dia (exceto `CANCELADA`) e bloqueia se `count >= maxVisitasDia` do profissional (422).
+5. **Paciente sem visita ativa simultânea:** O mesmo critério de sobreposição de horário é aplicado ao paciente — não é possível agendar duas visitas ativas (não canceladas/concluídas) com horários conflitantes para o mesmo paciente (422).
+
 ---
 
-## ⚖️ Trade-offs e Melhorias Futuras
+## 🎁 Bônus Implementados
 
-Caso tivéssemos mais tempo para o desenvolvimento, as seguintes melhorias seriam aplicadas:
-1. **Testes Automatizados Completo:** Adicionar testes de integração cobrindo os resolvers de GraphQL e testes unitários focando no Rollback de transações em cenários de falha.
-2. **Ambiente Multi-estágio real:** No frontend, utilizar builds multi-estágio reais com Nginx otimizado para o Docker de produção, em vez de expor o servidor de desenvolvimento Vite (Angular CLI) em todas as configurações.
-3. **Tratamento de Fusos Horários:** A normalização de fusos horários e datas para UTC no banco e conversão local no frontend para evitar discrepâncias em Salvador, BA.
+| Bônus | Status |
+| :--- | :--- |
+| Painel do Administrador (Angular) | ✅ `/admin/visitas` — agenda com filtros, paginação, agendar, confirmar/cancelar |
+| Regras de negócio extras | ✅ Limite diário + paciente sem visita simultânea |
+| Patterns adicionais | ✅ Factory, Observer e Decorator (detalhes abaixo) |
+
+---
+
+## 🧩 Design Patterns Adicionais (Bônus)
+
+### 3. Factory Pattern — Cálculo de `dataHoraFim`
+- **Onde:** `backend/src/factories/visit-end-date/`
+- **Por quê:** Cada tipo de visita tem duração diferente. A Factory encapsula a criação da calculadora correta (`AvaliacaoEndDateCalculator`, `FisioterapiaEndDateCalculator`, etc.) sem o service conhecer a regra de cada tipo.
+- **Sem o pattern:** `VisitSchedulingService` teria um `switch(tipo)` ou usaria `VISIT_DURATION_IN_MINUTES` inline — acoplamento entre agendamento e regra de duração.
+
+### 4. Observer Pattern — Eventos de mudança de status
+- **Onde:** `backend/src/observers/` — `VisitStatusEventPublisher` notifica `VisitStatusAuditLogger` após cada transição bem-sucedida em `VisitStatusService`.
+- **Por quê:** Desacopla efeitos colaterais (auditoria, notificações futuras, integrações) da lógica de transição das strategies.
+- **Sem o pattern:** Cada strategy ou o service teria `console.log`/envio de e-mail inline, violando SRP e dificultando adicionar novos listeners.
+
+### 5. Decorator Pattern — Guards declarativos
+- **Onde:** `backend/src/decorators/guards/` — `guarded(JwtAuthGuard, RoleGuard)` envolve handlers REST em `visit.routes.ts` e `professionals.routes.ts`.
+- **Por quê:** Composição declarativa de autenticação/autorização por rota, sem encadear múltiplos middlewares genéricos.
+- **Sem o pattern:** Rotas repetiriam `authenticate` + `authorizeRole(ADMIN)` como middlewares separados, sem composição explícita por handler.
+
+
 
 ---
 
 ## 🤖 Uso de Inteligência Artificial
 
-- **Ferramenta:** Gemini / Antigravity AI
-- **Uso:** Utilizada para acelerar a dockerização do frontend Angular 21, criar as configurações do Dockerfile ajustadas para rodar o build no alpine, automatizar o reaproveitamento de código nos controladores REST de acordo com os resolvers do GraphQL e configurar o `.dockerignore` para diminuir o tempo de build em mais de 90%.
+### Gemini / Antigravity AI
+Utilizada para ajustar a dockerização do frontend Angular 21, criar as configurações do Dockerfile ajustadas para rodar o build no alpine, automatizar o reaproveitamento de código nos controladores REST de acordo com os resolvers do GraphQL e configurar o `.dockerignore` para diminuir o tempo de build, criação de UI do front e criar texto arkdown para readme. Além de fazer um review no projeto e sugerir melhorias.
+

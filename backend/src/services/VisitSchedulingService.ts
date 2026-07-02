@@ -1,11 +1,14 @@
 import { Types } from "mongoose";
 import {
   UserRole,
-  VISIT_DURATION_IN_MINUTES,
   VisitStatus,
   VisitType,
 } from "../domain/enums";
 import { AppError } from "../errors/AppError";
+import {
+  visitEndDateFactory,
+  VisitEndDateFactory,
+} from "../factories/visit-end-date";
 import { VisitDocument, VisitEntity } from "../models";
 import { VisitRepository } from "../repositories/VisitRepository";
 import { PatientRepository } from "../repositories/PatientRepository";
@@ -29,6 +32,7 @@ export class VisitSchedulingService {
     private readonly visitRepository = new VisitRepository(),
     private readonly patientRepository = new PatientRepository(),
     private readonly professionalRepository = new ProfessionalRepository(),
+    private readonly endDateFactory: VisitEndDateFactory = visitEndDateFactory,
   ) {}
 
   async scheduleVisit(
@@ -49,17 +53,24 @@ export class VisitSchedulingService {
     );
     const tipo = this.parseVisitType(input.tipo);
     const dataHoraInicio = this.parseStartDate(input.dataHoraInicio);
-    const dataHoraFim = this.calculateEndDate(dataHoraInicio, tipo);
+    const dataHoraFim = this.endDateFactory.calculateEndDate(dataHoraInicio, tipo);
 
-    const [patient, professional, hasOverlap] = await Promise.all([
-      this.patientRepository.findById(pacienteId),
-      this.professionalRepository.findById(profissionalId),
-      this.visitRepository.hasOverlappingVisit({
-        profissionalId,
-        dataHoraInicio,
-        dataHoraFim,
-      }),
-    ]);
+    const [patient, professional, hasProfessionalOverlap, hasPatientOverlap, dailyVisitCount] =
+      await Promise.all([
+        this.patientRepository.findById(pacienteId),
+        this.professionalRepository.findById(profissionalId),
+        this.visitRepository.hasOverlappingVisit({
+          profissionalId,
+          dataHoraInicio,
+          dataHoraFim,
+        }),
+        this.visitRepository.hasPatientOverlappingVisit({
+          pacienteId,
+          dataHoraInicio,
+          dataHoraFim,
+        }),
+        this.visitRepository.countActiveVisitsOnDay(profissionalId, dataHoraInicio),
+      ]);
 
     if (!patient || !patient.ativo) {
       throw new AppError("Paciente nao encontrado ou inativo.", 404);
@@ -69,9 +80,23 @@ export class VisitSchedulingService {
       throw new AppError("Profissional nao encontrado ou inativo.", 404);
     }
 
-    if (hasOverlap) {
+    if (dailyVisitCount >= professional.maxVisitasDia) {
+      throw new AppError(
+        "Profissional atingiu o limite diario de visitas.",
+        422,
+      );
+    }
+
+    if (hasProfessionalOverlap) {
       throw new AppError(
         "Profissional ja possui visita com horario sobreposto.",
+        422,
+      );
+    }
+
+    if (hasPatientOverlap) {
+      throw new AppError(
+        "Paciente ja possui visita ativa com horario sobreposto.",
         422,
       );
     }
@@ -122,11 +147,5 @@ export class VisitSchedulingService {
     }
 
     return parsedDate;
-  }
-
-  private calculateEndDate(startDate: Date, visitType: VisitType): Date {
-    const durationInMinutes = VISIT_DURATION_IN_MINUTES[visitType];
-
-    return new Date(startDate.getTime() + durationInMinutes * 60 * 1000);
   }
 }

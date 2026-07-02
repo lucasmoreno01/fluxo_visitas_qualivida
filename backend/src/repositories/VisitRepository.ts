@@ -17,6 +17,13 @@ type VisitOverlapParams = {
   ignoredVisitId?: Types.ObjectId | string;
 };
 
+type PatientOverlapParams = {
+  pacienteId: Types.ObjectId | string;
+  dataHoraInicio: Date;
+  dataHoraFim: Date;
+  ignoredVisitId?: Types.ObjectId | string;
+};
+
 export class VisitRepository {
   async create(
     data: VisitEntity,
@@ -87,6 +94,34 @@ export class VisitRepository {
     }
 
     return VisitModel.exists(query).then(Boolean);
+  }
+
+  hasPatientOverlappingVisit(params: PatientOverlapParams): Promise<boolean> {
+    const query: QueryFilter<VisitEntity> = {
+      pacienteId: params.pacienteId,
+      status: { $nin: [VisitStatus.CANCELADA, VisitStatus.CONCLUIDA] },
+      dataHoraInicio: { $lt: params.dataHoraFim },
+      dataHoraFim: { $gt: params.dataHoraInicio },
+    };
+
+    if (params.ignoredVisitId) {
+      query._id = { $ne: params.ignoredVisitId };
+    }
+
+    return VisitModel.exists(query).then(Boolean);
+  }
+
+  countActiveVisitsOnDay(
+    profissionalId: string | Types.ObjectId,
+    data: Date,
+  ): Promise<number> {
+    const { inicio, fim } = this.getDayRange(data);
+
+    return VisitModel.countDocuments({
+      profissionalId,
+      status: { $ne: VisitStatus.CANCELADA },
+      dataHoraInicio: { $gte: inicio, $lt: fim },
+    }).exec();
   }
 
   updateStatus(

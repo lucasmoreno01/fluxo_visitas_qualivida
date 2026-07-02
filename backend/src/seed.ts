@@ -5,8 +5,8 @@ import {
   UserRole,
   VisitStatus,
   VisitType,
-  VISIT_DURATION_IN_MINUTES,
 } from "./domain/enums";
+import { visitEndDateFactory } from "./factories/visit-end-date";
 import {
   EvolutionModel,
   PatientModel,
@@ -24,7 +24,7 @@ function atDay(hour: number, minute = 0, dayOffset = 0): Date {
 }
 
 function endDate(start: Date, type: VisitType): Date {
-  return new Date(start.getTime() + VISIT_DURATION_IN_MINUTES[type] * 60 * 1000);
+  return visitEndDateFactory.calculateEndDate(start, type);
 }
 
 function history(params: {

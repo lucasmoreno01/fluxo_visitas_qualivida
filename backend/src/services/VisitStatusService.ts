@@ -1,6 +1,10 @@
 import { UserRole, VisitStatus } from "../domain/enums";
 import { AppError } from "../errors/AppError";
 import {
+  VisitStatusEventPublisher,
+  visitStatusEventPublisher,
+} from "../observers";
+import {
   EvolutionRepository,
   TransactionManager,
   VisitRepository,
@@ -10,6 +14,7 @@ import {
   VisitStatusStrategyRegistry,
   visitStatusStrategyRegistry,
 } from "../strategies/visita";
+import { VisitDocument } from "../models";
 
 export type StatusActorWithRole = {
   usuarioId: string;
@@ -28,6 +33,7 @@ export class VisitStatusService {
     private readonly evolutionRepository = new EvolutionRepository(),
     private readonly transactionManager = new TransactionManager(),
     private readonly strategyRegistry: VisitStatusStrategyRegistry = visitStatusStrategyRegistry,
+    private readonly eventPublisher: VisitStatusEventPublisher = visitStatusEventPublisher,
   ) {}
 
   async updateStatus(
@@ -41,37 +47,53 @@ export class VisitStatusService {
       throw new AppError("Visita nao encontrada.", 404);
     }
 
+    const previousStatus = visita.status;
+
     this.authorize(visita.profissionalId.toString(), payload.status, actor);
 
     const strategy = this.strategyRegistry.get(visita.status, payload.status);
     await strategy.validate(visita, payload);
 
+    let updatedVisit: VisitDocument;
+
     if (strategy.to !== VisitStatus.CONCLUIDA) {
-      return strategy.execute(visita, payload, actor, {
+      updatedVisit = await strategy.execute(visita, payload, actor, {
         visitRepository: this.visitRepository,
         evolutionRepository: this.evolutionRepository,
+      });
+    } else {
+      updatedVisit = await this.transactionManager.runInTransaction(async (session) => {
+        const freshVisit = await this.visitRepository.findById(id, session);
+
+        if (!freshVisit) {
+          throw new AppError("Visita nao encontrada.", 404);
+        }
+
+        const freshStrategy = this.strategyRegistry.get(
+          freshVisit.status,
+          payload.status,
+        );
+        await freshStrategy.validate(freshVisit, payload);
+
+        return freshStrategy.execute(freshVisit, payload, actor, {
+          visitRepository: this.visitRepository,
+          evolutionRepository: this.evolutionRepository,
+          session,
+        });
       });
     }
 
-    return this.transactionManager.runInTransaction(async (session) => {
-      const freshVisit = await this.visitRepository.findById(id, session);
-
-      if (!freshVisit) {
-        throw new AppError("Visita nao encontrada.", 404);
-      }
-
-      const freshStrategy = this.strategyRegistry.get(
-        freshVisit.status,
-        payload.status,
-      );
-      await freshStrategy.validate(freshVisit, payload);
-
-      return freshStrategy.execute(freshVisit, payload, actor, {
-        visitRepository: this.visitRepository,
-        evolutionRepository: this.evolutionRepository,
-        session,
-      });
+    await this.eventPublisher.publish({
+      visitId: updatedVisit.id,
+      pacienteId: updatedVisit.pacienteId.toString(),
+      profissionalId: updatedVisit.profissionalId.toString(),
+      statusAnterior: previousStatus,
+      statusNovo: payload.status,
+      usuarioId: actor.usuarioId,
+      timestamp: new Date(),
     });
+
+    return updatedVisit;
   }
 
   private authorize(

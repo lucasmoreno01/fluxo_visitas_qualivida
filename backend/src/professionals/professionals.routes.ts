@@ -1,17 +1,20 @@
 import { Router } from "express";
 import { UserRole } from "../domain/enums";
-import { authenticate } from "../middlewares/authenticate";
-import { authorizeRole } from "../middlewares/authorizeRole";
+import {
+  guarded,
+  JwtAuthGuard,
+  RoleGuard,
+} from "../decorators/guards";
 import { ProfessionalsController } from "./professionalsController";
 
 export const professionalRoutes = Router();
 const professionalsController = new ProfessionalsController();
+const jwtAuth = new JwtAuthGuard();
+const adminOnly = new RoleGuard([UserRole.ADMIN]);
 
-professionalRoutes.get("/", authenticate, professionalsController.list);
+professionalRoutes.get("/", guarded(jwtAuth)(professionalsController.list));
 
 professionalRoutes.get(
   "/:id/agenda",
-  authenticate,
-  authorizeRole(UserRole.ADMIN),
-  professionalsController.getAgenda,
+  guarded(jwtAuth, adminOnly)(professionalsController.getAgenda),
 );
