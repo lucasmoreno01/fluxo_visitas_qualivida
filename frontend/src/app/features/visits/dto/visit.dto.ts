@@ -6,10 +6,16 @@ export interface PatientSummaryDto {
   _id?: string;
   id?: string;
   nome: string;
+  telefone?: string;
   convenio?: string;
   endereco?: {
+    rua?: string;
     bairro?: string;
+    cidade?: string;
+    cep?: string;
   };
+  observacoes?: string;
+  ativo?: boolean;
 }
 
 export interface ProfessionalSummaryDto {

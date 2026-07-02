@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -7,6 +7,8 @@ import { EvolutionInputDto } from '../../../visits/dto/update-visit-status.dto';
 import { PatientSummaryDto, VisitDto, VisitStatus, VisitType } from '../../../visits/dto/visit.dto';
 import { VisitService } from '../../../visits/services/visit-service';
 import { UserDto } from '../../../../shared/dto/user.dto';
+import { PatientDetailsModalComponent } from '../../../../shared/components/patient-details-modal/patient-details-modal';
+import { PatientDetailsDto } from '../../../../shared/dto/patient.dto';
 
 type AgendaVisit = {
   id: string;
@@ -17,11 +19,12 @@ type AgendaVisit = {
   status: VisitStatus;
   convenio: string;
   dataHoraInicio: string;
+  patientDetails: PatientDetailsDto | null;
 };
 
 @Component({
   selector: 'app-professional-agenda-page',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, PatientDetailsModalComponent],
   templateUrl: './professional-agenda-page.html',
   styleUrl: './professional-agenda-page.scss',
 })
@@ -30,12 +33,14 @@ export class ProfessionalAgendaPage implements OnInit {
   private readonly visitService = inject(VisitService);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly changeDetector = inject(ChangeDetectorRef);
 
   protected selectedVisitId = '';
   protected loading = false;
   protected saving = false;
   protected errorMessage = '';
   protected successMessage = '';
+  protected selectedPatientDetails: PatientDetailsDto | null = null;
   protected todayLabel = new Date().toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: 'short',
@@ -106,18 +111,21 @@ export class ProfessionalAgendaPage implements OnInit {
         finalize(() => {
           this.saving = false;
           this.updateEvolutionFormState();
+          this.changeDetector.detectChanges();
         }),
       )
       .subscribe({
         next: (updatedVisit) => {
           this.replaceVisit(updatedVisit);
           this.successMessage = 'Atendimento iniciado.';
+          this.changeDetector.detectChanges();
         },
         error: (error) => {
           this.errorMessage = this.getErrorMessage(
             error,
             'Nao foi possivel iniciar o atendimento.',
           );
+          this.changeDetector.detectChanges();
         },
       });
   }
@@ -145,6 +153,7 @@ export class ProfessionalAgendaPage implements OnInit {
         finalize(() => {
           this.saving = false;
           this.updateEvolutionFormState();
+          this.changeDetector.detectChanges();
         }),
       )
       .subscribe({
@@ -152,12 +161,14 @@ export class ProfessionalAgendaPage implements OnInit {
           this.replaceVisit(updatedVisit);
           this.evolutionForm.reset();
           this.successMessage = 'Visita concluida com evolucao.';
+          this.changeDetector.detectChanges();
         },
         error: (error) => {
           this.errorMessage = this.getErrorMessage(
             error,
             'Nao foi possivel finalizar a visita com evolucao.',
           );
+          this.changeDetector.detectChanges();
         },
       });
   }
@@ -167,13 +178,30 @@ export class ProfessionalAgendaPage implements OnInit {
     this.router.navigateByUrl('/login');
   }
 
+  protected openPatientDetails(): void {
+    const patient = this.selectedVisit?.patientDetails;
+
+    if (patient) {
+      this.selectedPatientDetails = patient;
+    }
+  }
+
+  protected closePatientDetails(): void {
+    this.selectedPatientDetails = null;
+  }
+
   private loadAgenda(): void {
     this.loading = true;
     this.errorMessage = '';
 
     this.visitService
       .getMyAgenda()
-      .pipe(finalize(() => (this.loading = false)))
+      .pipe(
+        finalize(() => {
+          this.loading = false;
+          this.changeDetector.detectChanges();
+        }),
+      )
       .subscribe({
         next: (visits) => {
           this.visits = visits
@@ -181,12 +209,14 @@ export class ProfessionalAgendaPage implements OnInit {
             .sort((first, second) => first.dataHoraInicio.localeCompare(second.dataHoraInicio));
           this.selectedVisitId = this.visits[0]?.id ?? '';
           this.updateEvolutionFormState();
+          this.changeDetector.detectChanges();
         },
         error: (error) => {
           this.errorMessage = this.getErrorMessage(
             error,
             'Nao foi possivel carregar sua agenda de hoje.',
           );
+          this.changeDetector.detectChanges();
         },
       });
   }
@@ -218,6 +248,22 @@ export class ProfessionalAgendaPage implements OnInit {
       tipo: visit.tipo,
       status: visit.status,
       dataHoraInicio: visit.dataHoraInicio,
+      patientDetails: this.toPatientDetails(patient),
+    };
+  }
+
+  private toPatientDetails(patient: PatientSummaryDto | null): PatientDetailsDto | null {
+    if (!patient) {
+      return null;
+    }
+
+    return {
+      nome: patient.nome,
+      telefone: patient.telefone,
+      convenio: patient.convenio,
+      endereco: patient.endereco,
+      observacoes: patient.observacoes,
+      ativo: patient.ativo,
     };
   }
 

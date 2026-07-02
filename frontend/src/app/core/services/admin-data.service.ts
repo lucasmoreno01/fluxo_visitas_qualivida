@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 import { environment } from '../enviroment';
 
 export interface PatientDto {
@@ -49,7 +49,11 @@ export class AdminDataService {
 
   // Patients
   getPatients(): Observable<PatientDto[]> {
-    return this.http.get<PatientDto[]>(`${this.apiUrl}/pacientes`);
+    return this.http
+      .get<PatientDto[] | { items?: PatientDto[]; data?: PatientDto[]; pacientes?: PatientDto[] }>(
+        `${this.apiUrl}/pacientes`,
+      )
+      .pipe(map((response) => this.extractArray(response, 'pacientes')));
   }
 
   createPatient(patient: Omit<PatientDto, '_id' | 'id'>): Observable<PatientDto> {
@@ -66,7 +70,19 @@ export class AdminDataService {
   }
 
   getProfessionals(): Observable<{ items: ProfessionalDto[]; total: number }> {
-    return this.http.get<{ items: ProfessionalDto[]; total: number }>(`${this.apiUrl}/profissionais`);
+    return this.http
+      .get<
+        | ProfessionalDto[]
+        | { items?: ProfessionalDto[]; data?: ProfessionalDto[]; profissionais?: ProfessionalDto[]; total?: number }
+      >(`${this.apiUrl}/profissionais`)
+      .pipe(
+        map((response) => ({
+          items: this.extractArray(response, 'profissionais'),
+          total: Array.isArray(response)
+            ? response.length
+            : response.total ?? this.extractArray(response, 'profissionais').length,
+        })),
+      );
   }
 
   getProfessionalAgenda(id: string, date: string): Observable<any> {
@@ -81,7 +97,7 @@ export class AdminDataService {
     status?: string;
     page?: number;
     limit?: number;
-  }): Observable<any> {
+  }): Observable<{ items: any[]; total: number; page: number; limit: number }> {
     let params = new HttpParams();
     if (filters.data) params = params.set('data', filters.data);
     if (filters.profissionalId) params = params.set('profissionalId', filters.profissionalId);
@@ -89,7 +105,18 @@ export class AdminDataService {
     if (filters.page) params = params.set('page', String(filters.page));
     if (filters.limit) params = params.set('limit', String(filters.limit));
 
-    return this.http.get<any>(`${this.apiUrl}/visitas`, { params });
+    return this.http.get<any>(`${this.apiUrl}/visitas`, { params }).pipe(
+      map((response) => {
+        const items = this.extractArray(response, 'visitas');
+
+        return {
+          items,
+          total: Array.isArray(response) ? response.length : response.total ?? items.length,
+          page: Array.isArray(response) ? filters.page ?? 1 : response.page ?? filters.page ?? 1,
+          limit: Array.isArray(response) ? filters.limit ?? items.length : response.limit ?? filters.limit ?? items.length,
+        };
+      }),
+    );
   }
 
   scheduleVisit(visit: any): Observable<any> {
@@ -98,5 +125,19 @@ export class AdminDataService {
 
   updateVisitStatus(id: string, payload: { status: string; motivoCancelamento?: string }): Observable<any> {
     return this.http.patch<any>(`${this.apiUrl}/visitas/${id}/status`, payload);
+  }
+
+  private extractArray<T>(
+    response: T[] | Record<string, unknown>,
+    collectionKey: string,
+  ): T[] {
+    if (Array.isArray(response)) {
+      return response;
+    }
+
+    const record = response as Record<string, unknown>;
+    const value = record['items'] ?? record['data'] ?? record[collectionKey];
+
+    return Array.isArray(value) ? (value as T[]) : [];
   }
 }

@@ -316,6 +316,31 @@ td small {
   background: #991b1b;
 }
 
+.patient-link {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+}
+
+.patient-link:hover {
+  background: transparent;
+  color: #0f766e;
+}
+
+.patient-link strong {
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  transition: text-decoration-color 0.2s ease;
+}
+
+.patient-link:hover strong {
+  text-decoration-color: currentColor;
+}
+
 .cancel-reason {
   color: #b91c1c;
   font-size: 11px;

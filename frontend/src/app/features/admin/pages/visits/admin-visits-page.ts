@@ -1,21 +1,29 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AdminDataService, PatientDto, ProfessionalDto } from '../../../../core/services/admin-data.service';
 import { AuthService } from '../../../auth/services/auth-service';
+import { InputMaskDirective } from '../../../../shared/directives/input-mask.directive';
+import { MASK_CEP, MASK_PHONE_BR } from '../../../../shared/directives/input-masks';
+import { PatientDetailsModalComponent } from '../../../../shared/components/patient-details-modal/patient-details-modal';
+import { PatientDetailsDto } from '../../../../shared/dto/patient.dto';
 
 @Component({
   selector: 'app-admin-visits-page',
-  imports: [ReactiveFormsModule, FormsModule],
+  imports: [ReactiveFormsModule, FormsModule, InputMaskDirective, PatientDetailsModalComponent],
   templateUrl: './admin-visits-page.html',
   styleUrl: './admin-visits-page.scss',
 })
 export class AdminVisitsPage implements OnInit {
+  protected readonly maskPhone = MASK_PHONE_BR;
+  protected readonly maskCep = MASK_CEP;
+
   private readonly formBuilder = inject(FormBuilder);
   private readonly adminService = inject(AdminDataService);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly changeDetector = inject(ChangeDetectorRef);
 
   protected activeTab: 'visitas' | 'pacientes' | 'usuarios' = 'visitas';
   protected loading = false;
@@ -40,6 +48,7 @@ export class AdminVisitsPage implements OnInit {
   // Cancellation Modal/FormState
   protected cancelingVisitId: string | null = null;
   protected motivoCancelamento = '';
+  protected selectedPatientDetails: PatientDetailsDto | null = null;
 
   // Forms
   protected readonly filtersForm = this.formBuilder.nonNullable.group({
@@ -116,27 +125,40 @@ export class AdminVisitsPage implements OnInit {
         page: this.currentPage,
         limit: this.limit,
       })
-      .pipe(finalize(() => (this.loading = false)))
+      .pipe(
+        finalize(() => {
+          this.loading = false;
+          this.changeDetector.detectChanges();
+        }),
+      )
       .subscribe({
         next: (res) => {
           this.visits = res.items || [];
           this.totalVisits = res.total || 0;
+          this.changeDetector.detectChanges();
         },
         error: () => {
           this.errorMsg = 'Nao foi possivel carregar a lista de visitas.';
+          this.changeDetector.detectChanges();
         },
       });
   }
 
   protected loadPatients(): void {
     this.adminService.getPatients().subscribe({
-      next: (res) => (this.patients = res),
+      next: (res) => {
+        this.patients = res;
+        this.changeDetector.detectChanges();
+      },
     });
   }
 
   protected loadProfessionals(): void {
     this.adminService.getProfessionals().subscribe({
-      next: (res) => (this.professionals = res.items || []),
+      next: (res) => {
+        this.professionals = res.items || [];
+        this.changeDetector.detectChanges();
+      },
     });
   }
 
@@ -153,7 +175,12 @@ export class AdminVisitsPage implements OnInit {
 
     this.adminService
       .scheduleVisit(this.scheduleForm.getRawValue())
-      .pipe(finalize(() => (this.saving = false)))
+      .pipe(
+        finalize(() => {
+          this.saving = false;
+          this.changeDetector.detectChanges();
+        }),
+      )
       .subscribe({
         next: () => {
           this.successMsg = 'Visita agendada com sucesso!';
@@ -161,9 +188,11 @@ export class AdminVisitsPage implements OnInit {
           this.vagasRestantes = null;
           this.professionalAgenda = [];
           this.loadVisits();
+          this.changeDetector.detectChanges();
         },
         error: (err) => {
           this.errorMsg = err.error?.message || 'Erro ao agendar a visita.';
+          this.changeDetector.detectChanges();
         },
       });
   }
@@ -183,10 +212,12 @@ export class AdminVisitsPage implements OnInit {
       next: (res) => {
         this.vagasRestantes = res.vagasRestantes;
         this.professionalAgenda = res.visitas || [];
+        this.changeDetector.detectChanges();
       },
       error: () => {
         this.vagasRestantes = null;
         this.professionalAgenda = [];
+        this.changeDetector.detectChanges();
       },
     });
   }
@@ -219,15 +250,22 @@ export class AdminVisitsPage implements OnInit {
 
     this.adminService
       .createPatient(payload)
-      .pipe(finalize(() => (this.saving = false)))
+      .pipe(
+        finalize(() => {
+          this.saving = false;
+          this.changeDetector.detectChanges();
+        }),
+      )
       .subscribe({
         next: () => {
           this.successMsg = 'Paciente cadastrado com sucesso!';
           this.patientForm.reset();
           this.loadPatients();
+          this.changeDetector.detectChanges();
         },
         error: (err) => {
           this.errorMsg = err.error?.message || 'Erro ao cadastrar o paciente.';
+          this.changeDetector.detectChanges();
         },
       });
   }
@@ -241,9 +279,11 @@ export class AdminVisitsPage implements OnInit {
       next: () => {
         patient.ativo = nextAtivo;
         this.successMsg = `Status do paciente alterado com sucesso para ${nextAtivo ? 'Ativo' : 'Inativo'}.`;
+        this.changeDetector.detectChanges();
       },
       error: (err) => {
         this.errorMsg = err.error?.message || 'Erro ao alterar status do paciente.';
+        this.changeDetector.detectChanges();
       },
     });
   }
@@ -275,15 +315,22 @@ export class AdminVisitsPage implements OnInit {
 
     this.adminService
       .createUser(payload)
-      .pipe(finalize(() => (this.saving = false)))
+      .pipe(
+        finalize(() => {
+          this.saving = false;
+          this.changeDetector.detectChanges();
+        }),
+      )
       .subscribe({
         next: () => {
           this.successMsg = 'Usuario/Profissional cadastrado com sucesso!';
           this.userForm.reset({ role: 'PROFISSIONAL', ativo: true, tipo: 'ENFERMEIRO', maxVisitasDia: 5 });
           this.loadProfessionals();
+          this.changeDetector.detectChanges();
         },
         error: (err) => {
           this.errorMsg = err.error?.message || 'Erro ao cadastrar o usuario.';
+          this.changeDetector.detectChanges();
         },
       });
   }
@@ -293,14 +340,21 @@ export class AdminVisitsPage implements OnInit {
     this.loading = true;
     this.adminService
       .updateVisitStatus(id, { status: 'CONFIRMADA' })
-      .pipe(finalize(() => (this.loading = false)))
+      .pipe(
+        finalize(() => {
+          this.loading = false;
+          this.changeDetector.detectChanges();
+        }),
+      )
       .subscribe({
         next: () => {
           this.successMsg = 'Visita confirmada com sucesso.';
           this.loadVisits();
+          this.changeDetector.detectChanges();
         },
         error: (err) => {
           this.errorMsg = err.error?.message || 'Erro ao confirmar a visita.';
+          this.changeDetector.detectChanges();
         },
       });
   }
@@ -333,15 +387,18 @@ export class AdminVisitsPage implements OnInit {
           this.loading = false;
           this.cancelingVisitId = null;
           this.motivoCancelamento = '';
+          this.changeDetector.detectChanges();
         }),
       )
       .subscribe({
         next: () => {
           this.successMsg = 'Visita cancelada com sucesso.';
           this.loadVisits();
+          this.changeDetector.detectChanges();
         },
         error: (err) => {
           this.errorMsg = err.error?.message || 'Erro ao cancelar a visita.';
+          this.changeDetector.detectChanges();
         },
       });
   }
@@ -394,6 +451,66 @@ export class AdminVisitsPage implements OnInit {
   protected formatDateLabel(dateStr: string): string {
     const d = new Date(dateStr);
     return d.toLocaleDateString('pt-BR');
+  }
+
+  protected openPatientDetails(patient: PatientDto): void {
+    this.selectedPatientDetails = this.toPatientDetails(patient);
+  }
+
+  protected openPatientFromVisit(visit: any): void {
+    const patient = this.resolvePatientFromVisit(visit);
+
+    if (patient) {
+      this.openPatientDetails(patient);
+    }
+  }
+
+  protected closePatientDetails(): void {
+    this.selectedPatientDetails = null;
+  }
+
+  private resolvePatientFromVisit(visit: any): PatientDto | null {
+    if (!visit.pacienteId) {
+      return null;
+    }
+
+    if (typeof visit.pacienteId === 'string') {
+      return this.patients.find((patient) => (patient._id || patient.id) === visit.pacienteId) ?? null;
+    }
+
+    const patientId = visit.pacienteId._id || visit.pacienteId.id;
+    const fromList = patientId
+      ? this.patients.find((patient) => (patient._id || patient.id) === patientId)
+      : null;
+
+    if (fromList) {
+      return fromList;
+    }
+
+    return {
+      nome: visit.pacienteId.nome,
+      telefone: visit.pacienteId.telefone ?? '',
+      convenio: visit.pacienteId.convenio ?? '',
+      endereco: {
+        rua: visit.pacienteId.endereco?.rua ?? '',
+        bairro: visit.pacienteId.endereco?.bairro ?? '',
+        cidade: visit.pacienteId.endereco?.cidade ?? '',
+        cep: visit.pacienteId.endereco?.cep ?? '',
+      },
+      observacoes: visit.pacienteId.observacoes,
+      ativo: visit.pacienteId.ativo ?? true,
+    };
+  }
+
+  private toPatientDetails(patient: PatientDto): PatientDetailsDto {
+    return {
+      nome: patient.nome,
+      telefone: patient.telefone,
+      convenio: patient.convenio,
+      endereco: patient.endereco,
+      observacoes: patient.observacoes,
+      ativo: patient.ativo,
+    };
   }
 
   protected logout(): void {

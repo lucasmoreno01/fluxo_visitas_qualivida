@@ -105,7 +105,13 @@
                       <small>{{ formatDateLabel(visit.dataHoraInicio) }}</small>
                     </td>
                     <td>
-                      <strong>{{ formatPatient(visit) }}</strong>
+                      <button
+                        type="button"
+                        class="patient-link"
+                        (click)="openPatientFromVisit(visit)"
+                      >
+                        <strong>{{ formatPatient(visit) }}</strong>
+                      </button>
                       <small>{{ formatPatientBairro(visit) }}</small>
                     </td>
                     <td>
@@ -215,15 +221,24 @@
                     </span>
                   </td>
                   <td>
-                    <button
-                      type="button"
-                      class="action-btn"
-                      [class.danger]="patient.ativo"
-                      [class.success]="!patient.ativo"
-                      (click)="togglePatientStatus(patient)"
-                    >
-                      {{ patient.ativo ? 'Desativar' : 'Reativar' }}
-                    </button>
+                    <div class="action-buttons">
+                      <button
+                        type="button"
+                        class="action-btn"
+                        (click)="openPatientDetails(patient)"
+                      >
+                        Detalhes
+                      </button>
+                      <button
+                        type="button"
+                        class="action-btn"
+                        [class.danger]="patient.ativo"
+                        [class.success]="!patient.ativo"
+                        (click)="togglePatientStatus(patient)"
+                      >
+                        {{ patient.ativo ? 'Desativar' : 'Reativar' }}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               }
@@ -354,7 +369,13 @@
         </label>
         <label>
           Telefone
-          <input type="text" formControlName="telefone" placeholder="(71) 99999-9999" />
+          <input
+            type="text"
+            formControlName="telefone"
+            [appInputMask]="maskPhone"
+            inputmode="tel"
+            placeholder="(71) 99999-9999"
+          />
         </label>
         <label>
           Convenio
@@ -378,7 +399,13 @@
             </label>
             <label>
               CEP
-              <input type="text" formControlName="cep" placeholder="40000-000" />
+              <input
+                type="text"
+                formControlName="cep"
+                [appInputMask]="maskCep"
+                inputmode="numeric"
+                placeholder="40000-000"
+              />
             </label>
           </div>
         </fieldset>
@@ -478,4 +505,11 @@
       </div>
     </div>
   </div>
+}
+
+@if (selectedPatientDetails) {
+  <app-patient-details-modal
+    [patient]="selectedPatientDetails"
+    (closed)="closePatientDetails()"
+  />
 }

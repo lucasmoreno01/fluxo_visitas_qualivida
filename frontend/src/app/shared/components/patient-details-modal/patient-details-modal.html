@@ -1,0 +1,40 @@
+<div class="modal-backdrop" (click)="onBackdropClick($event)">
+  <div class="patient-dialog" role="dialog" aria-labelledby="patient-dialog-title">
+    <header>
+      <div>
+        <span>Paciente</span>
+        <h2 id="patient-dialog-title">{{ patient.nome }}</h2>
+      </div>
+      @if (patient.ativo !== undefined) {
+        <span class="status-badge" [class.active]="patient.ativo" [class.inactive]="!patient.ativo">
+          {{ patient.ativo ? 'ATIVO' : 'INATIVO' }}
+        </span>
+      }
+    </header>
+
+    <dl class="details-list">
+      <div>
+        <dt>Telefone</dt>
+        <dd>{{ patient.telefone || 'Nao informado' }}</dd>
+      </div>
+      <div>
+        <dt>Convenio</dt>
+        <dd>{{ patient.convenio || 'Nao informado' }}</dd>
+      </div>
+      <div>
+        <dt>Endereco</dt>
+        <dd>{{ formatAddress() }}</dd>
+      </div>
+      @if (patient.observacoes) {
+        <div class="full">
+          <dt>Observacoes</dt>
+          <dd>{{ patient.observacoes }}</dd>
+        </div>
+      }
+    </dl>
+
+    <footer>
+      <button type="button" class="secondary-button" (click)="close()">Fechar</button>
+    </footer>
+  </div>
+</div>

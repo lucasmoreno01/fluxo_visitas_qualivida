@@ -16,19 +16,29 @@ export class VisitService {
 
   getMyAgenda(date = new Date()): Observable<VisitDto[]> {
     const currentUser = this.authService.getCurrentUser();
-    let params = new HttpParams().set('data', this.formatDate(date));
+    let baseParams = new HttpParams().set('limit', '100');
 
     if (currentUser?.profissionalId) {
-      params = params.set('profissionalId', currentUser.profissionalId);
+      baseParams = baseParams.set('profissionalId', currentUser.profissionalId);
     }
 
-    return this.http
-      .get<VisitDto[] | VisitsListResponseDto>(`${this.apiUrl}/visitas`, { params })
-      .pipe(
-        map((response) => this.extractVisits(response)),
-        map((visits) => this.onlyCurrentProfessionalVisits(visits)),
-        switchMap((visits) => this.withVisitDetails(visits)),
-      );
+    const dateParams = baseParams.set('data', this.formatDate(date));
+
+    return this.fetchVisits(dateParams).pipe(
+      switchMap((visits) => {
+        if (visits.length) {
+          return of(visits);
+        }
+
+        return this.fetchVisits(baseParams).pipe(
+          map((allVisits) => {
+            const sameDayVisits = allVisits.filter((visit) => this.isSameLocalDate(visit, date));
+            return sameDayVisits.length ? sameDayVisits : allVisits;
+          }),
+        );
+      }),
+      switchMap((visits) => this.withVisitDetails(visits)),
+    );
   }
 
   getVisitDetails(id: string): Observable<VisitDto> {
@@ -56,6 +66,15 @@ export class VisitService {
     }
 
     return response.data ?? response.items ?? response.visitas ?? [];
+  }
+
+  private fetchVisits(params: HttpParams): Observable<VisitDto[]> {
+    return this.http
+      .get<VisitDto[] | VisitsListResponseDto>(`${this.apiUrl}/visitas`, { params })
+      .pipe(
+        map((response) => this.extractVisits(response)),
+        map((visits) => this.onlyCurrentProfessionalVisits(visits)),
+      );
   }
 
   private onlyCurrentProfessionalVisits(visits: VisitDto[]): VisitDto[] {
@@ -100,5 +119,9 @@ export class VisitService {
     const day = String(date.getDate()).padStart(2, '0');
 
     return `${year}-${month}-${day}`;
+  }
+
+  private isSameLocalDate(visit: VisitDto, date: Date): boolean {
+    return this.formatDate(new Date(visit.dataHoraInicio)) === this.formatDate(date);
   }
 }
