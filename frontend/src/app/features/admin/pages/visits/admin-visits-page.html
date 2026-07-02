@@ -42,9 +42,7 @@
 }
 
 <div class="admin-layout">
-  <!-- LEFT COLUMN: TABLES -->
   <main class="main-panel">
-    <!-- TAB 1: VISITAS -->
     @if (activeTab === 'visitas') {
       <div class="card-wrapper">
         <form [formGroup]="filtersForm" class="filters">
@@ -80,7 +78,7 @@
           <table>
             <thead>
               <tr>
-                <th>Data/Hora</th>
+                <th>Hora/Data</th>
                 <th>Paciente</th>
                 <th>Profissional</th>
                 <th>Tipo</th>
@@ -102,6 +100,7 @@
                   <tr>
                     <td>
                       <strong>{{ formatTime(visit.dataHoraInicio) }}</strong>
+
                       <small>{{ formatDateLabel(visit.dataHoraInicio) }}</small>
                     </td>
                     <td>
@@ -145,7 +144,7 @@
                           </button>
                         }
                         @if (visit.status === 'CANCELADA') {
-                          <small class="cancel-reason"
+                          <small class="cancel-reason" [title]="visit.motivoCancelamento"
                             >Motivo: {{ visit.motivoCancelamento }}</small
                           >
                         }
@@ -163,7 +162,6 @@
             </tbody>
           </table>
 
-          <!-- Pagination -->
           @if (totalPages > 1) {
             <div class="pagination">
               <button
@@ -187,7 +185,6 @@
       </div>
     }
 
-    <!-- TAB 2: PACIENTES -->
     @if (activeTab === 'pacientes') {
       <div class="table-card">
         <table>
@@ -248,7 +245,6 @@
       </div>
     }
 
-    <!-- TAB 3: USUARIOS & PROFISSIONAIS -->
     @if (activeTab === 'usuarios') {
       <div class="table-card">
         <table>
@@ -288,9 +284,7 @@
     }
   </main>
 
-  <!-- RIGHT COLUMN: FORMS -->
   <aside class="schedule-panel">
-    <!-- TAB 1 FORM: SCHEDULING -->
     @if (activeTab === 'visitas') {
       <h2>Agendar Visita</h2>
       <form [formGroup]="scheduleForm" (ngSubmit)="scheduleVisit()">
@@ -335,7 +329,6 @@
           <input type="datetime-local" formControlName="dataHoraInicio" />
         </label>
 
-        <!-- Dynamic Professional Slot Summary -->
         @if (vagasRestantes !== null) {
           <div class="slots-info" [class.low-slots]="vagasRestantes === 0">
             <strong>Agenda do Dia Selecionado:</strong>
@@ -359,7 +352,6 @@
       </form>
     }
 
-    <!-- TAB 2 FORM: CREATE PATIENT -->
     @if (activeTab === 'pacientes') {
       <h2>Cadastrar Paciente</h2>
       <form [formGroup]="patientForm" (ngSubmit)="createPatient()">
@@ -425,7 +417,6 @@
       </form>
     }
 
-    <!-- TAB 3 FORM: CREATE USER & PROFESSIONAL -->
     @if (activeTab === 'usuarios') {
       <h2>Cadastrar Usuario</h2>
       <form [formGroup]="userForm" (ngSubmit)="registerUser()">
@@ -449,7 +440,6 @@
           </select>
         </label>
 
-        <!-- Conditional Professional Fields -->
         @if (userForm.controls.role.value === 'PROFISSIONAL') {
           <fieldset class="prof-fieldset">
             <legend>Dados de Profissional</legend>
@@ -484,7 +474,6 @@
   </aside>
 </div>
 
-<!-- INLINE CANCELLATION DIALOG -->
 @if (cancelingVisitId) {
   <div class="modal-backdrop">
     <div class="cancellation-dialog">
@@ -508,8 +497,5 @@
 }
 
 @if (selectedPatientDetails) {
-  <app-patient-details-modal
-    [patient]="selectedPatientDetails"
-    (closed)="closePatientDetails()"
-  />
+  <app-patient-details-modal [patient]="selectedPatientDetails" (closed)="closePatientDetails()" />
 }

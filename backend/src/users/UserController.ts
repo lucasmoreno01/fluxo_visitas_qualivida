@@ -1,8 +1,8 @@
-import { Request, Response, NextFunction } from "express";
-import { UserModel, ProfessionalModel } from "../models";
+import { NextFunction, Request, Response } from "express";
 import { hashPassword } from "../auth/password";
-import { AppError } from "../errors/AppError";
 import { UserRole } from "../domain/enums";
+import { AppError } from "../errors/AppError";
+import { ProfessionalModel, UserModel } from "../models";
 
 export class UserController {
   create = async (req: Request, res: Response, next: NextFunction) => {
@@ -13,7 +13,6 @@ export class UserController {
         throw new AppError("Campos obrigatorios ausentes.", 400);
       }
 
-      // Check if user already exists
       const existingUser = await UserModel.findOne({ email }).exec();
       if (existingUser) {
         throw new AppError("Email ja cadastrado.", 400);
@@ -30,10 +29,16 @@ export class UserController {
       });
 
       if (role === UserRole.PROFISSIONAL) {
-        if (!professionalInfo?.tipo || !professionalInfo?.especialidade || !professionalInfo?.maxVisitasDia) {
-          // Clean up created user to keep operation atomic
+        if (
+          !professionalInfo?.tipo ||
+          !professionalInfo?.especialidade ||
+          !professionalInfo?.maxVisitasDia
+        ) {
           await UserModel.findByIdAndDelete(user._id).exec();
-          throw new AppError("Campos do profissional obrigatorios (tipo, especialidade, maxVisitasDia).", 400);
+          throw new AppError(
+            "Campos do profissional obrigatorios (tipo, especialidade, maxVisitasDia).",
+            400,
+          );
         }
 
         await ProfessionalModel.create({
@@ -45,7 +50,6 @@ export class UserController {
         });
       }
 
-      // Hide password in response
       const userObj = user.toObject();
       delete (userObj as any).senha;
 

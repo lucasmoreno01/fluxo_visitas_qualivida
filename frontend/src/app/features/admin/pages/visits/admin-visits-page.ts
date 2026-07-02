@@ -2,12 +2,16 @@ import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { finalize } from 'rxjs';
-import { AdminDataService, PatientDto, ProfessionalDto } from '../../../../core/services/admin-data.service';
-import { AuthService } from '../../../auth/services/auth-service';
+import {
+  AdminDataService,
+  PatientDto,
+  ProfessionalDto,
+} from '../../../../core/services/admin-data.service';
+import { PatientDetailsModalComponent } from '../../../../shared/components/patient-details-modal/patient-details-modal';
 import { InputMaskDirective } from '../../../../shared/directives/input-mask.directive';
 import { MASK_CEP, MASK_PHONE_BR } from '../../../../shared/directives/input-masks';
-import { PatientDetailsModalComponent } from '../../../../shared/components/patient-details-modal/patient-details-modal';
 import { PatientDetailsDto } from '../../../../shared/dto/patient.dto';
+import { AuthService } from '../../../auth/services/auth-service';
 
 @Component({
   selector: 'app-admin-visits-page',
@@ -18,6 +22,9 @@ import { PatientDetailsDto } from '../../../../shared/dto/patient.dto';
 export class AdminVisitsPage implements OnInit {
   protected readonly maskPhone = MASK_PHONE_BR;
   protected readonly maskCep = MASK_CEP;
+
+  private readonly autoHideDelayMs = 5000;
+  private feedbackTimeoutId: number | null = null;
 
   private readonly formBuilder = inject(FormBuilder);
   private readonly adminService = inject(AdminDataService);
@@ -31,26 +38,21 @@ export class AdminVisitsPage implements OnInit {
   protected errorMsg = '';
   protected successMsg = '';
 
-  // Data lists
   protected visits: any[] = [];
   protected patients: PatientDto[] = [];
   protected professionals: ProfessionalDto[] = [];
 
-  // Pagination & Filtering
   protected currentPage = 1;
   protected totalVisits = 0;
   protected limit = 5;
 
-  // Real-time professional slots check
   protected professionalAgenda: any[] = [];
   protected vagasRestantes: number | null = null;
 
-  // Cancellation Modal/FormState
   protected cancelingVisitId: string | null = null;
   protected motivoCancelamento = '';
   protected selectedPatientDetails: PatientDetailsDto | null = null;
 
-  // Forms
   protected readonly filtersForm = this.formBuilder.nonNullable.group({
     data: [''],
     profissionalId: [''],
@@ -89,21 +91,48 @@ export class AdminVisitsPage implements OnInit {
   ngOnInit(): void {
     this.loadAllData();
 
-    // Listen to filter changes to automatically reload visits
     this.filtersForm.valueChanges.subscribe(() => {
       this.currentPage = 1;
       this.loadVisits();
     });
 
-    // Listen to professional & date changes in the schedule form to show vagas restantes
-    this.scheduleForm.controls.profissionalId.valueChanges.subscribe(() => this.checkProfessionalSlots());
-    this.scheduleForm.controls.dataHoraInicio.valueChanges.subscribe(() => this.checkProfessionalSlots());
+    this.scheduleForm.controls.profissionalId.valueChanges.subscribe(() =>
+      this.checkProfessionalSlots(),
+    );
+    this.scheduleForm.controls.dataHoraInicio.valueChanges.subscribe(() =>
+      this.checkProfessionalSlots(),
+    );
   }
 
   protected changeTab(tab: 'visitas' | 'pacientes' | 'usuarios'): void {
     this.activeTab = tab;
+  }
+
+  private clearFeedbackMessages(): void {
+    if (this.feedbackTimeoutId !== null) {
+      window.clearTimeout(this.feedbackTimeoutId);
+      this.feedbackTimeoutId = null;
+    }
+
     this.errorMsg = '';
     this.successMsg = '';
+  }
+
+  private showFeedback(message: string, type: 'success' | 'error'): void {
+    this.clearFeedbackMessages();
+
+    if (type === 'success') {
+      this.successMsg = message;
+      this.errorMsg = '';
+    } else {
+      this.errorMsg = message;
+      this.successMsg = '';
+    }
+
+    this.feedbackTimeoutId = window.setTimeout(() => {
+      this.clearFeedbackMessages();
+      this.changeDetector.detectChanges();
+    }, this.autoHideDelayMs);
   }
 
   protected loadAllData(): void {
@@ -114,7 +143,6 @@ export class AdminVisitsPage implements OnInit {
 
   protected loadVisits(): void {
     this.loading = true;
-    this.errorMsg = '';
 
     const filterVal = this.filtersForm.value;
     this.adminService
@@ -138,7 +166,7 @@ export class AdminVisitsPage implements OnInit {
           this.changeDetector.detectChanges();
         },
         error: () => {
-          this.errorMsg = 'Nao foi possivel carregar a lista de visitas.';
+          this.showFeedback('Nao foi possivel carregar a lista de visitas.', 'error');
           this.changeDetector.detectChanges();
         },
       });
@@ -162,7 +190,6 @@ export class AdminVisitsPage implements OnInit {
     });
   }
 
-  // Scheduling
   protected scheduleVisit(): void {
     if (this.scheduleForm.invalid) {
       this.scheduleForm.markAllAsTouched();
@@ -170,8 +197,6 @@ export class AdminVisitsPage implements OnInit {
     }
 
     this.saving = true;
-    this.errorMsg = '';
-    this.successMsg = '';
 
     this.adminService
       .scheduleVisit(this.scheduleForm.getRawValue())
@@ -183,7 +208,7 @@ export class AdminVisitsPage implements OnInit {
       )
       .subscribe({
         next: () => {
-          this.successMsg = 'Visita agendada com sucesso!';
+          this.showFeedback('Visita agendada com sucesso!', 'success');
           this.scheduleForm.reset({ tipo: 'AVALIACAO' });
           this.vagasRestantes = null;
           this.professionalAgenda = [];
@@ -191,7 +216,7 @@ export class AdminVisitsPage implements OnInit {
           this.changeDetector.detectChanges();
         },
         error: (err) => {
-          this.errorMsg = err.error?.message || 'Erro ao agendar a visita.';
+          this.showFeedback(err.error?.message || 'Erro ao agendar a visita.', 'error');
           this.changeDetector.detectChanges();
         },
       });
@@ -207,7 +232,7 @@ export class AdminVisitsPage implements OnInit {
       return;
     }
 
-    const dateOnly = datetime.substring(0, 10); // Extract YYYY-MM-DD
+    const dateOnly = datetime.substring(0, 10);
     this.adminService.getProfessionalAgenda(profId, dateOnly).subscribe({
       next: (res) => {
         this.vagasRestantes = res.vagasRestantes;
@@ -222,7 +247,6 @@ export class AdminVisitsPage implements OnInit {
     });
   }
 
-  // Patient Actions
   protected createPatient(): void {
     if (this.patientForm.invalid) {
       this.patientForm.markAllAsTouched();
@@ -230,8 +254,6 @@ export class AdminVisitsPage implements OnInit {
     }
 
     this.saving = true;
-    this.errorMsg = '';
-    this.successMsg = '';
 
     const formVal = this.patientForm.getRawValue();
     const payload = {
@@ -258,13 +280,13 @@ export class AdminVisitsPage implements OnInit {
       )
       .subscribe({
         next: () => {
-          this.successMsg = 'Paciente cadastrado com sucesso!';
+          this.showFeedback('Paciente cadastrado com sucesso!', 'success');
           this.patientForm.reset();
           this.loadPatients();
           this.changeDetector.detectChanges();
         },
         error: (err) => {
-          this.errorMsg = err.error?.message || 'Erro ao cadastrar o paciente.';
+          this.showFeedback(err.error?.message || 'Erro ao cadastrar o paciente.', 'error');
           this.changeDetector.detectChanges();
         },
       });
@@ -278,17 +300,19 @@ export class AdminVisitsPage implements OnInit {
     this.adminService.updatePatient(id, { ativo: nextAtivo }).subscribe({
       next: () => {
         patient.ativo = nextAtivo;
-        this.successMsg = `Status do paciente alterado com sucesso para ${nextAtivo ? 'Ativo' : 'Inativo'}.`;
+        this.showFeedback(
+          `Status do paciente alterado com sucesso para ${nextAtivo ? 'Ativo' : 'Inativo'}.`,
+          'success',
+        );
         this.changeDetector.detectChanges();
       },
       error: (err) => {
-        this.errorMsg = err.error?.message || 'Erro ao alterar status do paciente.';
+        this.showFeedback(err.error?.message || 'Erro ao alterar status do paciente.', 'error');
         this.changeDetector.detectChanges();
       },
     });
   }
 
-  // User Actions
   protected registerUser(): void {
     if (this.userForm.invalid) {
       this.userForm.markAllAsTouched();
@@ -296,8 +320,6 @@ export class AdminVisitsPage implements OnInit {
     }
 
     this.saving = true;
-    this.errorMsg = '';
-    this.successMsg = '';
 
     const formVal = this.userForm.getRawValue();
     const payload = {
@@ -306,11 +328,14 @@ export class AdminVisitsPage implements OnInit {
       senha: formVal.senha,
       role: formVal.role,
       ativo: formVal.ativo,
-      professionalInfo: formVal.role === 'PROFISSIONAL' ? {
-        tipo: formVal.tipo,
-        especialidade: formVal.especialidade,
-        maxVisitasDia: formVal.maxVisitasDia,
-      } : undefined,
+      professionalInfo:
+        formVal.role === 'PROFISSIONAL'
+          ? {
+              tipo: formVal.tipo,
+              especialidade: formVal.especialidade,
+              maxVisitasDia: formVal.maxVisitasDia,
+            }
+          : undefined,
     };
 
     this.adminService
@@ -323,19 +348,23 @@ export class AdminVisitsPage implements OnInit {
       )
       .subscribe({
         next: () => {
-          this.successMsg = 'Usuario/Profissional cadastrado com sucesso!';
-          this.userForm.reset({ role: 'PROFISSIONAL', ativo: true, tipo: 'ENFERMEIRO', maxVisitasDia: 5 });
+          this.showFeedback('Usuario/Profissional cadastrado com sucesso!', 'success');
+          this.userForm.reset({
+            role: 'PROFISSIONAL',
+            ativo: true,
+            tipo: 'ENFERMEIRO',
+            maxVisitasDia: 5,
+          });
           this.loadProfessionals();
           this.changeDetector.detectChanges();
         },
         error: (err) => {
-          this.errorMsg = err.error?.message || 'Erro ao cadastrar o usuario.';
+          this.showFeedback(err.error?.message || 'Erro ao cadastrar o usuario.', 'error');
           this.changeDetector.detectChanges();
         },
       });
   }
 
-  // Visit status updates (Confirm / Cancel)
   protected confirmVisit(id: string): void {
     this.loading = true;
     this.adminService
@@ -348,12 +377,12 @@ export class AdminVisitsPage implements OnInit {
       )
       .subscribe({
         next: () => {
-          this.successMsg = 'Visita confirmada com sucesso.';
+          this.showFeedback('Visita confirmada com sucesso.', 'success');
           this.loadVisits();
           this.changeDetector.detectChanges();
         },
         error: (err) => {
-          this.errorMsg = err.error?.message || 'Erro ao confirmar a visita.';
+          this.showFeedback(err.error?.message || 'Erro ao confirmar a visita.', 'error');
           this.changeDetector.detectChanges();
         },
       });
@@ -362,8 +391,6 @@ export class AdminVisitsPage implements OnInit {
   protected startCancellation(id: string): void {
     this.cancelingVisitId = id;
     this.motivoCancelamento = '';
-    this.errorMsg = '';
-    this.successMsg = '';
   }
 
   protected cancelCancellation(): void {
@@ -374,7 +401,7 @@ export class AdminVisitsPage implements OnInit {
   protected submitCancellation(): void {
     if (!this.cancelingVisitId) return;
     if (!this.motivoCancelamento.trim()) {
-      this.errorMsg = 'Informe o motivo do cancelamento.';
+      this.showFeedback('Informe o motivo do cancelamento.', 'error');
       return;
     }
 
@@ -392,18 +419,17 @@ export class AdminVisitsPage implements OnInit {
       )
       .subscribe({
         next: () => {
-          this.successMsg = 'Visita cancelada com sucesso.';
+          this.showFeedback('Visita cancelada com sucesso.', 'success');
           this.loadVisits();
           this.changeDetector.detectChanges();
         },
         error: (err) => {
-          this.errorMsg = err.error?.message || 'Erro ao cancelar a visita.';
+          this.showFeedback(err.error?.message || 'Erro ao cancelar a visita.', 'error');
           this.changeDetector.detectChanges();
         },
       });
   }
 
-  // Pagination Helpers
   protected get totalPages(): number {
     return Math.ceil(this.totalVisits / this.limit) || 1;
   }
@@ -415,7 +441,6 @@ export class AdminVisitsPage implements OnInit {
     }
   }
 
-  // Format details for rendering
   protected formatProfessional(visit: any): string {
     if (!visit.profissionalId) return 'Nao associado';
     if (typeof visit.profissionalId === 'string') {
@@ -475,7 +500,9 @@ export class AdminVisitsPage implements OnInit {
     }
 
     if (typeof visit.pacienteId === 'string') {
-      return this.patients.find((patient) => (patient._id || patient.id) === visit.pacienteId) ?? null;
+      return (
+        this.patients.find((patient) => (patient._id || patient.id) === visit.pacienteId) ?? null
+      );
     }
 
     const patientId = visit.pacienteId._id || visit.pacienteId.id;

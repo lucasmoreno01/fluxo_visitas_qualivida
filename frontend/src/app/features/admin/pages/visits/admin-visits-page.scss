@@ -16,7 +16,9 @@
   letter-spacing: 0.05em;
 }
 
-h1, h2, h3 {
+h1,
+h2,
+h3 {
   margin: 0;
   color: #172033;
 }
@@ -39,7 +41,6 @@ h2 {
   gap: 16px;
 }
 
-/* Tabs */
 .tabs {
   display: flex;
   background: #f1f5f9;
@@ -172,7 +173,6 @@ legend {
   gap: 10px;
 }
 
-/* Buttons */
 button {
   border: 0;
   border-radius: 8px;
@@ -206,7 +206,6 @@ button:disabled {
   border-color: #94a3b8;
 }
 
-/* Tables */
 .table-card {
   overflow-x: auto;
 }
@@ -239,7 +238,7 @@ td strong {
 }
 
 td small {
-  margin-top: 2px;
+  margin: 2px 4px;
   color: #64748b;
   font-size: 12px;
 }
@@ -251,7 +250,6 @@ td small {
   font-style: italic;
 }
 
-/* Status Badges */
 .status-badge {
   display: inline-flex;
   padding: 4px 8px;
@@ -286,7 +284,6 @@ td small {
   color: #b91c1c;
 }
 
-/* Action Buttons */
 .action-buttons {
   display: flex;
   flex-direction: column;
@@ -362,7 +359,6 @@ td small {
   color: #c2410c;
 }
 
-/* Feedback */
 .feedback {
   padding: 10px 14px;
   border-radius: 6px;
@@ -383,7 +379,6 @@ td small {
   border: 1px solid #86efac;
 }
 
-/* Slots Info Card */
 .slots-info {
   background: #f0fdfa;
   border: 1px solid #99f6e4;
@@ -404,7 +399,6 @@ td small {
   padding-left: 16px;
 }
 
-/* Pagination */
 .pagination {
   display: flex;
   justify-content: space-between;
@@ -425,7 +419,6 @@ td small {
   font-weight: 600;
 }
 
-/* Modal/Cancellation Dialog */
 .modal-backdrop {
   position: fixed;
   top: 0;
@@ -446,7 +439,9 @@ td small {
   padding: 24px;
   width: 420px;
   max-width: 90vw;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
   display: grid;
   gap: 14px;
 }
